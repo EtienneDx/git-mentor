@@ -39,7 +39,7 @@ impl RepositoryProvider for SimpleRepositoryProvider {
 mod tests {
   use std::process::Command;
 
-use super::*;
+  use super::*;
   use git_server::repository::RepositoryProvider;
   use tempfile::tempdir;
 
@@ -52,17 +52,17 @@ use super::*;
     let repo_path = path.join("test");
 
     let res = Command::new("git")
-        .arg("init")
-        .arg(repo_path)
-        .output()
-        .expect("Failed to execute git init command");
-    
+      .arg("init")
+      .arg(repo_path)
+      .output()
+      .expect("Failed to execute git init command");
+
     assert!(res.status.success());
 
     let provider = SimpleRepositoryProvider::new(path.to_str().unwrap().to_string());
     let repository = provider.find_repository(&(), "test");
     assert!(repository.is_some());
-    
+
     let repository = provider.find_repository(&(), "another");
     assert!(repository.is_none());
   }

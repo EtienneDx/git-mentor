@@ -7,9 +7,7 @@ use tokio::io::AsyncReadExt;
 use tokio::process::{Child, ChildStdin, Command};
 
 use crate::error::GitProcessError;
-use crate::repository::{
-  RepositoryProvider, Repository, RepositoryPermission,
-};
+use crate::repository::{Repository, RepositoryPermission, RepositoryProvider};
 
 use crate::git_server_config::GitServerConfig;
 
@@ -109,7 +107,7 @@ impl GitProcess {
       Ok::<(), ()>(())
     });
   }
-  
+
   /// Closes the channel.
   async fn close(&self) -> Result<(), ()> {
     self.handle.close(self.channel_id).await.map_err(|_| {
@@ -161,9 +159,15 @@ fn parse_command(command: &str) -> Result<(String, String), GitProcessError> {
   if parts.len() != 2 {
     return Err(GitProcessError::InvalidCommandError);
   }
-  
-  let command = parts.get(0).ok_or(GitProcessError::InvalidCommandError)?.to_owned();
-  let repo_path = parts.get(1).ok_or(GitProcessError::InvalidCommandError)?.to_owned();
+
+  let command = parts
+    .get(0)
+    .ok_or(GitProcessError::InvalidCommandError)?
+    .to_owned();
+  let repo_path = parts
+    .get(1)
+    .ok_or(GitProcessError::InvalidCommandError)?
+    .to_owned();
 
   let repo_path = repo_path.trim_matches(|c| c == '\'' || c == '"').to_owned();
   Ok((command, repo_path))
@@ -179,15 +183,27 @@ mod tests {
 
   #[test]
   fn test_get_permission() {
-    assert_eq!(get_permission("git-upload-pack").expect("ok"), RepositoryPermission::Read);
-    assert_eq!(get_permission("git-receive-pack").expect("ok"), RepositoryPermission::Write);
+    assert_eq!(
+      get_permission("git-upload-pack").expect("ok"),
+      RepositoryPermission::Read
+    );
+    assert_eq!(
+      get_permission("git-receive-pack").expect("ok"),
+      RepositoryPermission::Write
+    );
     get_permission("invalid-command").expect_err("Expected error");
   }
 
   #[test]
   fn test_parse_command() {
-    assert_eq!(parse_command("git-upload-pack '/path/to/repo'").expect("ok"), ("git-upload-pack".to_string(), "/path/to/repo".to_string()));
-    assert_eq!(parse_command("git-receive-pack \"/path/to/repo\"").expect("ok"), ("git-receive-pack".to_string(), "/path/to/repo".to_string()));
+    assert_eq!(
+      parse_command("git-upload-pack '/path/to/repo'").expect("ok"),
+      ("git-upload-pack".to_string(), "/path/to/repo".to_string())
+    );
+    assert_eq!(
+      parse_command("git-receive-pack \"/path/to/repo\"").expect("ok"),
+      ("git-receive-pack".to_string(), "/path/to/repo".to_string())
+    );
     parse_command("invalid-command").expect_err("Expected error");
     parse_command("git-upload-pack '/path/to/repo' extra-arg").expect_err("Expected error");
   }

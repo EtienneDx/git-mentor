@@ -13,7 +13,8 @@ use crate::{
   authenticator::Authenticator,
   error::{GitError, GitProcessError},
   git_server_config::GitServerConfig,
-  repository::RepositoryProvider, server::git_process::start_process,
+  repository::RepositoryProvider,
+  server::git_process::start_process,
 };
 
 pub struct RequestHandler<A, R, U>
