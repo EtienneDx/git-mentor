@@ -1,0 +1,36 @@
+"Create repository": {
+  "Solution 1": {
+    "Duplicate existing empty repository" -> "Done"
+  }
+  "Solution 2": {
+    direction: right
+    "Run `git init`" -> "Copy/simlink hooks" -> "Done"
+  }
+}
+"Pre-Receive hook": {
+  direction: right
+  is_valid: "Is branch allowed?" {
+    shape: diamond
+  }
+  "Check target branch" -> is_valid
+  is_valid -> "Proceed": Yes
+  is_valid -> "Abort": No
+}
+"Post-Receive hook": {
+  direction: down
+  is_tracked_branch: Is branch tracked {
+    shape: diamond
+  }
+  on_push_workflow: Is there an `on-push` workflow {
+    shape: diamond
+  }
+  done_1: Done
+  done_2: Done
+  clone_validation: Clone validation directory
+  "Get metadata" -> is_tracked_branch
+  is_tracked_branch -> clone_validation: Yes
+  is_tracked_branch -> done_1: No
+  clone_validation -> "Load workflow file" -> on_push_workflow
+  on_push_workflow -> done_2: No
+  on_push_workflow -> "Submit SQS request": Yes
+}

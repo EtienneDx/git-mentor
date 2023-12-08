@@ -1,0 +1,6 @@
+[workspace]
+
+members = [
+  "git-server",
+  "git-server-example"
+]

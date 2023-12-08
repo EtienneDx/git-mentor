@@ -1,0 +1,6 @@
+{
+  "rust-analyzer.linkedProjects": [
+    ".\\git-server\\Cargo.toml",
+    ".\\git-server-example\\Cargo.toml"
+  ]
+}

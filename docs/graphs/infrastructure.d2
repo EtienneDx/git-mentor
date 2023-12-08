@@ -1,0 +1,61 @@
+
+direction: right
+user: User {
+  icon: https://icons.terrastruct.com/essentials%2F365-user.svg
+}
+
+server: Server {
+  ssh: SSH {
+    icon: https://icons.terrastruct.com/essentials%2F204-settings.svg
+  }
+  web: Web {
+    icon: https://icons.terrastruct.com/essentials%2F204-settings.svg
+  }
+  db: Database {
+    icon: https://icons.terrastruct.com/essentials%2F117-database.svg
+  }
+  git: Git repositories {
+    icon: https://icons.terrastruct.com/dev%2Fgit.svg
+  }
+  test_worker: Test worker {
+    icon: https://icons.terrastruct.com/essentials%2F112-server.svg
+  }
+  docker: Docker {
+    icon: https://icons.terrastruct.com/dev%2Fdocker.svg
+  }
+
+  ssh -> db
+  ssh -> git
+  git -> test_worker
+
+  web -> db
+  web -> git
+
+  test_worker <-> docker
+  test_worker <-> db
+}
+
+worker_note: |md
+  The test worker will clone the repositories,\
+    build a docker image, run it and report\
+    the result to a database
+| {
+  width: 40
+}
+
+sqs: SQS {
+  icon: https://icons.terrastruct.com/aws%2FApplication%20Integration%2FAmazon-Simple-Queue-Service-SQS.svg
+}
+
+front: Front-End {
+  icon: https://icons.terrastruct.com/aws%2FStorage%2FAmazon-Simple-Storage-Service-S3_Bucket_light-bg.svg
+}
+
+user -> server.ssh: Git access
+user -> front: Web access
+front -> server.web: API access
+
+server.git -> sqs: Post receive
+sqs -> server.test_worker
+
+server.test_worker -- worker_note

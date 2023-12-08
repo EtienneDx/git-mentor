@@ -1,0 +1,17 @@
+direction: down
+user: User {
+  icon: https://icons.terrastruct.com/essentials%2F365-user.svg
+}
+is_valid: Is key valid {
+  shape: diamond
+}
+has_perm: Does user have permission {
+  shape: diamond
+}
+reject: Reject connection
+accept: Accept connection
+
+user -> "Connect with public key" -> "Validate against db" -> is_valid
+is_valid -> reject: No
+has_perm -> reject: No
+is_valid -> has_perm -> accept: Yes
