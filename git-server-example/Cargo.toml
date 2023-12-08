@@ -11,4 +11,5 @@ git-server = { path = "../git-server" }
 log = "0.4.20"
 russh-keys = "0.38.x"
 simple_logger = "4.2.0"
+tempfile = "3.8.1"
 tokio = "1.33.0"

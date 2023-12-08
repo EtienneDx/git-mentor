@@ -37,14 +37,33 @@ impl RepositoryProvider for SimpleRepositoryProvider {
 
 #[cfg(test)]
 mod tests {
-  use super::*;
+  use std::process::Command;
+
+use super::*;
   use git_server::repository::RepositoryProvider;
+  use tempfile::tempdir;
 
   #[test]
   fn test_simple_repository_provider() {
-    let provider = SimpleRepositoryProvider::new("repositories".to_string());
+    // Setup temp directory and temp repository
+    let temp_dir = tempdir().expect("Failed to create temp directory");
+    let path = temp_dir.path();
+
+    let repo_path = path.join("test");
+
+    let res = Command::new("git")
+        .arg("init")
+        .arg(repo_path)
+        .output()
+        .expect("Failed to execute git init command");
+    
+    assert!(res.status.success());
+
+    let provider = SimpleRepositoryProvider::new(path.to_str().unwrap().to_string());
     let repository = provider.find_repository(&(), "test");
     assert!(repository.is_some());
-    // not checking path, it is installation dependant
+    
+    let repository = provider.find_repository(&(), "another");
+    assert!(repository.is_none());
   }
 }
