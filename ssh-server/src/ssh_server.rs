@@ -3,21 +3,17 @@ use std::sync::Arc;
 use russh::server::{Config, Server};
 
 use crate::{
-  authenticator::Authenticator, error::GitError, git_server_config::GitServerConfig,
-  repository::RepositoryProvider,
+  authenticator::Authenticator, error::SshError, handler::Handler,
+  server::request_handler::RequestHandler, user::User,
 };
 
-use crate::server::request_handler::RequestHandler;
-
-pub struct GitServer<A, R, U>
+pub struct SshServer<A, U>
 where
   A: Authenticator<User = U>,
-  R: RepositoryProvider<User = U>,
-  U: Sync + Send + 'static,
+  U: User,
 {
   authenticator: Arc<A>,
-  repository_provider: Arc<R>,
-  config: GitServerConfig,
+  handlers: Vec<Arc<Box<dyn Handler<User = U>>>>,
 }
 
 /// A Git server implementation that uses an authenticator and repository provider.
@@ -25,29 +21,27 @@ where
 /// `A` is the authenticator type that provides user authentication.
 /// `R` is the repository provider type that provides access to Git repositories.
 /// `U` is the user type that is returned by the authenticator and used by the repositories to check permissions.
-impl<A, R, U> GitServer<A, R, U>
+impl<A, U> SshServer<A, U>
 where
   A: Authenticator<User = U>,
-  R: RepositoryProvider<User = U>,
-  U: Sync + Send + 'static,
+  U: User,
 {
-  /// Creates a new `GitServer`, using the given `Authenticator`, `RepositoryProvider` and configuration.
+  /// Creates a new `SshServer`, using the given `Authenticator`, `RepositoryProvider` and configuration.
   ///
   /// - The `Authenticator` is used to authenticate users based on their public key.
   /// - The `RepositoryProvider` is used to provide repositories based on the user and the path requested.
-  /// - The `GitServerConfig` is used to configure the server.
+  /// - The `SshServerConfig` is used to configure the server.
   ///
   /// The generic arguments are deduced from the arguments passed to this function.
-  pub fn new(authenticator: A, repository_provider: R, config: GitServerConfig) -> Self {
-    GitServer {
+  pub fn new(authenticator: A) -> Self {
+    SshServer {
       authenticator: Arc::new(authenticator),
-      repository_provider: Arc::new(repository_provider),
-      config,
+      handlers: Vec::new(),
     }
   }
 
   /// Starts listening for connections on the given port.
-  pub async fn listen(self, port: u16) -> Result<(), GitError> {
+  pub async fn listen(self, port: u16) -> Result<(), SshError> {
     let config = Config {
       inactivity_timeout: Some(std::time::Duration::from_secs(30)),
       auth_rejection_time: std::time::Duration::from_secs(3),
@@ -59,22 +53,21 @@ where
     println!("Listening on port {}", port);
     res.await.map_err(|e| e.into())
   }
+
+  /// Adds a handler to the server. Handlers are called in the order they are added, stopping when one of them returns `Accepted` or `Rejected`.
+  pub fn add_handler<H: Handler<User = U> + 'static>(&mut self, handler: H) {
+    self.handlers.push(Arc::new(Box::new(handler)));
+  }
 }
 
-impl<A, R, U> Server for GitServer<A, R, U>
+impl<A, U> Server for SshServer<A, U>
 where
   A: Authenticator<User = U>,
-  R: RepositoryProvider<User = U>,
-  U: Sync + Send + 'static,
+  U: User,
 {
-  type Handler = RequestHandler<A, R, U>;
+  type Handler = RequestHandler<A, U>;
 
   fn new_client(&mut self, peer_addr: Option<std::net::SocketAddr>) -> Self::Handler {
-    RequestHandler::new(
-      self.authenticator.clone(),
-      self.repository_provider.clone(),
-      self.config.clone(),
-      peer_addr,
-    )
+    RequestHandler::new(self.authenticator.clone(), self.handlers.clone(), peer_addr)
   }
 }

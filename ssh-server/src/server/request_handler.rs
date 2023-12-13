@@ -1,4 +1,4 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, pin::Pin, sync::Arc};
 
 use async_trait::async_trait;
 use log::debug;
@@ -7,58 +7,65 @@ use russh::{
   Channel, ChannelId, CryptoVec,
 };
 use russh_keys::key::PublicKey;
-use tokio::{io::AsyncWriteExt, process::ChildStdin};
+use tokio::io::{AsyncWrite, AsyncWriteExt};
 
-use crate::{
-  authenticator::Authenticator,
-  error::{GitError, GitProcessError},
-  git_server_config::GitServerConfig,
-  repository::RepositoryProvider,
-  server::git_process::start_process,
-};
+use crate::{authenticator::Authenticator, error::SshError, handler::HandlerResult, user::User};
 
-pub struct RequestHandler<A, R, U>
+pub struct RequestHandler<A, U>
 where
   A: Authenticator<User = U>,
-  R: RepositoryProvider<User = U>,
-  U: Sync + Send + 'static,
+  U: User,
 {
   authenticator: Arc<A>,
-  repository_provider: Arc<R>,
-  config: GitServerConfig,
+  handlers: Vec<Arc<Box<dyn crate::handler::Handler<User = U>>>>,
   user: Option<A::User>,
-  git_process: HashMap<ChannelId, ChildStdin>,
+  git_process: HashMap<ChannelId, Pin<Box<dyn AsyncWrite + Sync + Send + 'static>>>,
 }
-impl<A, R, U> RequestHandler<A, R, U>
+
+impl<A, U> RequestHandler<A, U>
 where
   A: Authenticator<User = U>,
-  R: RepositoryProvider<User = U>,
-  U: Sync + Send + 'static,
+  U: User,
 {
   pub fn new(
     authenticator: Arc<A>,
-    repository_provider: Arc<R>,
-    config: GitServerConfig,
+    handlers: Vec<Arc<Box<dyn crate::handler::Handler<User = U>>>>,
     _: Option<std::net::SocketAddr>,
   ) -> Self {
     RequestHandler {
       authenticator,
-      repository_provider,
-      config,
+      handlers,
       user: None,
       git_process: HashMap::new(),
     }
   }
+
+  fn handle(&self, handle: Handle, channel_id: ChannelId, command: &str) -> HandlerResult {
+    if let Some(user) = &self.user {
+      for handler in &self.handlers {
+        let result = handler.handle(user, handle.clone(), channel_id, command);
+        match result {
+          HandlerResult::Accepted(stdin) => {
+            return HandlerResult::Accepted(stdin);
+          }
+          HandlerResult::Rejected(message) => {
+            return HandlerResult::Rejected(message);
+          }
+          HandlerResult::Skipped => {}
+        }
+      }
+    }
+    HandlerResult::Skipped
+  }
 }
 
 #[async_trait]
-impl<A, R, U> Handler for RequestHandler<A, R, U>
+impl<A, U> Handler for RequestHandler<A, U>
 where
   A: Authenticator<User = U>,
-  R: RepositoryProvider<User = U>,
-  U: Sync + Send + 'static,
+  U: User,
 {
-  type Error = GitError;
+  type Error = SshError;
 
   /// Authenticates the user based on their public key.
   async fn auth_publickey(
@@ -68,7 +75,7 @@ where
   ) -> Result<(Self, Auth), Self::Error> {
     if self.user.is_some() {
       // We shouldn't be able to authenticate twice
-      return Err(GitError::AlreadyAuthenticated);
+      return Err(SshError::AlreadyAuthenticated);
     }
     if let Some(user) = self.authenticator.validate_public_key(user, key)? {
       self.user = Some(user);
@@ -103,39 +110,30 @@ where
   ) -> Result<(Self, Session), Self::Error> {
     if self.user.is_none() {
       // We shouldn't be able to authenticate twice
-      return Err(GitError::NotAuthenticated);
+      return Err(SshError::NotAuthenticated);
     }
     debug!("Executing function, trying to start git process");
     let handle = session.handle();
 
     if let Ok(data_str) = std::str::from_utf8(data) {
-      match start_process(
-        data_str,
-        handle.clone(),
-        channel_id,
-        self.user.as_ref().unwrap(),
-        self.repository_provider.as_ref(),
-        &self.config,
-      )
-      .await
-      {
-        Err(e) => {
-          debug!("Error starting git process: {:?}", e);
-          send_error(&handle, channel_id, e.message()).await;
+      let response = self.handle(handle.clone(), channel_id, data_str);
+
+      match response {
+        HandlerResult::Accepted(stdin) => {
+          self.git_process.insert(channel_id, stdin);
+        }
+        HandlerResult::Rejected(message) => {
+          send_error(&handle, channel_id, &message).await;
           handle.close(channel_id).await.unwrap();
         }
-        Ok(process) => {
-          self.git_process.insert(channel_id, process);
+        HandlerResult::Skipped => {
+          send_error(&handle, channel_id, "Command not supported").await;
+          handle.close(channel_id).await.unwrap();
         }
       }
     } else {
       debug!("Invalid UTF-8 exec received: {:?}", data);
-      send_error(
-        &handle,
-        channel_id,
-        GitProcessError::InvalidCommandError.message(),
-      )
-      .await;
+      send_error(&handle, channel_id, "Invalid command received").await;
       handle.close(channel_id).await.unwrap();
     }
 
@@ -152,7 +150,7 @@ where
     if let Some(process) = self.git_process.get_mut(&channel_id) {
       process.write_all(data).await.map_err(|e| {
         debug!("Error writing to git process: {:?}", e);
-        GitError::ProcessNotStartedError
+        SshError::ProcessNotStartedError
       })?;
     }
     Ok((self, session))

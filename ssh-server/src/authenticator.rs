@@ -1,4 +1,4 @@
-use crate::error::GitError;
+use crate::error::SshError;
 
 use russh_keys::key::PublicKey;
 /// A trait for authenticating users based on their public key.
@@ -19,5 +19,5 @@ pub trait Authenticator: Sync + Send + 'static {
     &self,
     user: &str,
     key: &PublicKey,
-  ) -> Result<Option<Self::User>, GitError>;
+  ) -> Result<Option<Self::User>, SshError>;
 }

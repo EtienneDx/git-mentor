@@ -1,18 +1,20 @@
-use git_server::authenticator::Authenticator;
+use ssh_server::authenticator::Authenticator;
 
 use russh_keys::key::PublicKey;
+
+use crate::simple_user::User;
 
 pub struct SimpleAuth;
 
 impl Authenticator for SimpleAuth {
-  type User = ();
+  type User = User;
 
   fn validate_public_key(
     &self,
     _user: &str,
     _key: &PublicKey,
-  ) -> Result<Option<Self::User>, git_server::error::GitError> {
-    Ok(Some(()))
+  ) -> Result<Option<Self::User>, ssh_server::error::SshError> {
+    Ok(Some(User))
   }
 }
 
@@ -34,6 +36,6 @@ mod tests {
       )
       .unwrap()
       .unwrap();
-    assert_eq!(user, ());
+    assert_eq!(user, User);
   }
 }

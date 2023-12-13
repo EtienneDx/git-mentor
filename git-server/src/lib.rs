@@ -1,9 +1,8 @@
-pub mod authenticator;
 pub mod error;
-mod git_server;
-mod git_server_config;
+mod git_handler;
+mod git_handler_config;
+pub(crate) mod git_process;
 pub mod repository;
-pub mod server;
 
-pub use crate::git_server::*;
-pub use crate::git_server_config::*;
+pub use crate::git_handler::*;
+pub use crate::git_handler_config::*;

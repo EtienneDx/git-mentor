@@ -1,5 +1,7 @@
 use git_server::repository::{Repository, RepositoryPermission};
 
+use crate::simple_user::User;
+
 pub struct SimpleRepository {
   path: String,
 }
@@ -11,7 +13,7 @@ impl SimpleRepository {
 }
 
 impl Repository for SimpleRepository {
-  type User = ();
+  type User = User;
 
   fn has_permission(&self, _user: &Self::User, _permission: RepositoryPermission) -> bool {
     true
@@ -31,7 +33,7 @@ mod tests {
   fn test_simple_repository() {
     let repository = SimpleRepository::new("test".to_string());
     assert_eq!(repository.get_path(), "test");
-    assert!(repository.has_permission(&(), RepositoryPermission::Read));
-    assert!(repository.has_permission(&(), RepositoryPermission::Write));
+    assert!(repository.has_permission(&User, RepositoryPermission::Read));
+    assert!(repository.has_permission(&User, RepositoryPermission::Write));
   }
 }
