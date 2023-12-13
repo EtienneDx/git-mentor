@@ -2,5 +2,6 @@
 
 members = [
   "git-server",
-  "git-server-example"
+  "git-server-example",
+  "gmt-api"
 ]
