@@ -6,7 +6,7 @@ Git mentor aims to provide an efficient way to manage repositories for a classro
 
 ### SSH git access
 
-Students and teachers will be able to access their repositories via git over an ssh protocol.
+Students and teachers will be able to access their repositories via git over an ssh protocol.     
 
 ### Web access
 
