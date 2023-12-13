@@ -169,7 +169,6 @@ fn parse_command(command: &str) -> Result<(String, String), GitProcessError> {
     .ok_or(GitProcessError::InvalidCommandError)?
     .to_owned();
 
-  let repo_path = repo_path.trim_matches(|c| c == '\'' || c == '"').to_owned();
   Ok((command, repo_path))
 }
 
