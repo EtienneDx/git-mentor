@@ -13,3 +13,4 @@ russh-keys = "0.38.x"
 shell-words = "1.1.0"
 thiserror = "1.0.50"
 tokio = { version = "1.33.0", features = ["time"] }
+ssh-server = { path = "../ssh-server" }

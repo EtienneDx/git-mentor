@@ -1,12 +1,14 @@
-use git_server::{GitServer, GitServerConfig};
+use git_server::{GitHandler, GitHandlerConfig};
 use log::debug;
 use simple_auth::SimpleAuth;
+use ssh_server::SshServer;
 
 use crate::simple_repository_provider::SimpleRepositoryProvider;
 
 mod simple_auth;
 mod simple_repository;
 mod simple_repository_provider;
+mod simple_user;
 
 #[tokio::main]
 async fn main() {
@@ -15,10 +17,11 @@ async fn main() {
 
   let auth = SimpleAuth;
   let repository_provider = SimpleRepositoryProvider::new("repositories".to_string());
-  let config = GitServerConfig {
+  let config = GitHandlerConfig {
     use_git_command: true,
   };
-  let server = GitServer::new(auth, repository_provider, config);
+  let mut server = SshServer::new(auth);
+  server.add_handler(GitHandler::new(config, repository_provider));
 
   server
     .listen(2222)

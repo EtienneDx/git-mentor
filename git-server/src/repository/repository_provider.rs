@@ -1,7 +1,9 @@
+use ssh_server::user::User;
+
 use crate::repository::Repository;
 /// A trait for providing repositories.
 pub trait RepositoryProvider: Sync + Send + 'static {
-  type User;
+  type User: User;
   type Repository: Repository<User = Self::User>;
 
   /// Finds a repository given its path.

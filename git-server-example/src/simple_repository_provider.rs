@@ -3,7 +3,7 @@ use std::env;
 use git_server::repository::RepositoryProvider;
 use log::debug;
 
-use crate::simple_repository::SimpleRepository;
+use crate::{simple_repository::SimpleRepository, simple_user::User};
 
 pub struct SimpleRepositoryProvider {
   repositories_path: String,
@@ -16,7 +16,7 @@ impl SimpleRepositoryProvider {
 }
 
 impl RepositoryProvider for SimpleRepositoryProvider {
-  type User = ();
+  type User = User;
 
   type Repository = SimpleRepository;
 
@@ -60,10 +60,10 @@ mod tests {
     assert!(res.status.success());
 
     let provider = SimpleRepositoryProvider::new(path.to_str().unwrap().to_string());
-    let repository = provider.find_repository(&(), "test");
+    let repository = provider.find_repository(&User, "test");
     assert!(repository.is_some());
 
-    let repository = provider.find_repository(&(), "another");
+    let repository = provider.find_repository(&User, "another");
     assert!(repository.is_none());
   }
 }
