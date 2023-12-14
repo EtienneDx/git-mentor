@@ -2,7 +2,7 @@ use ssh_server::user::User;
 
 /// Different types of possible connections
 #[derive(Debug, PartialEq)]
-pub enum SshUser {
+pub enum GmtUser {
   /// A user which does not exist in the database
   Public,
   /// A connected user
@@ -15,4 +15,4 @@ pub enum SshUser {
   Admin,
 }
 
-impl User for SshUser {}
+impl User for GmtUser {}

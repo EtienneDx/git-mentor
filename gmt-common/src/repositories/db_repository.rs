@@ -1,19 +1,19 @@
 use git_server::repository::{Repository, RepositoryPermission};
 
-use crate::ssh_user::SshUser;
+use crate::gmt_user::GmtUser;
 
 pub struct DbRepository {
   // TODO: Add inner fields backed by DB
 }
 
 impl Repository for DbRepository {
-  type User = SshUser;
+  type User = GmtUser;
 
   fn has_permission(&self, user: &Self::User, _permission: RepositoryPermission) -> bool {
     match user {
-      SshUser::Admin => true,
-      SshUser::Connected() => true,
-      SshUser::Public => false,
+      GmtUser::Admin => true,
+      GmtUser::Connected() => true,
+      GmtUser::Public => false,
     }
   }
 
@@ -31,28 +31,28 @@ mod test {
     let repo = DbRepository {};
 
     assert_eq!(
-      repo.has_permission(&SshUser::Admin, RepositoryPermission::Read),
+      repo.has_permission(&GmtUser::Admin, RepositoryPermission::Read),
       true
     );
     assert_eq!(
-      repo.has_permission(&SshUser::Connected(), RepositoryPermission::Read),
+      repo.has_permission(&GmtUser::Connected(), RepositoryPermission::Read),
       true
     );
     assert_eq!(
-      repo.has_permission(&SshUser::Public, RepositoryPermission::Read),
+      repo.has_permission(&GmtUser::Public, RepositoryPermission::Read),
       false
     );
 
     assert_eq!(
-      repo.has_permission(&SshUser::Admin, RepositoryPermission::Write),
+      repo.has_permission(&GmtUser::Admin, RepositoryPermission::Write),
       true
     );
     assert_eq!(
-      repo.has_permission(&SshUser::Connected(), RepositoryPermission::Write),
+      repo.has_permission(&GmtUser::Connected(), RepositoryPermission::Write),
       true
     );
     assert_eq!(
-      repo.has_permission(&SshUser::Public, RepositoryPermission::Write),
+      repo.has_permission(&GmtUser::Public, RepositoryPermission::Write),
       false
     );
   }

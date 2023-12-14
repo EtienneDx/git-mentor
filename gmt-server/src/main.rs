@@ -1,14 +1,11 @@
 use git_server::{GitHandler, GitHandlerConfig};
+use gmt_common::repositories::db_repository_provider::DbRepositoryProvider;
 use log::info;
 use ssh_server::SshServer;
 
-use crate::{
-  authentication::DbAuthenticator, repositories::db_repository_provider::DbRepositoryProvider,
-};
+use crate::authentication::DbAuthenticator;
 
 mod authentication;
-mod repositories;
-mod ssh_user;
 
 #[tokio::main]
 async fn main() {

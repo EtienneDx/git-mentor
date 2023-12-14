@@ -1,5 +1,5 @@
 [package]
-name = "gmt-server"
+name = "gmt-common"
 version = "0.1.0"
 edition = "2021"
 
@@ -8,9 +8,3 @@ edition = "2021"
 [dependencies]
 git-server = { path = "../git-server" }
 ssh-server = { path = "../ssh-server" }
-gmt-common = { path = "../gmt-common" }
-log = "0.4.20"
-russh-keys = "0.38.x"
-simple_logger = "4.2.0"
-tempfile = "3.8.1"
-tokio = "1.33.0"

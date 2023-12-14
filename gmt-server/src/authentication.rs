@@ -1,6 +1,5 @@
+use gmt_common::gmt_user::GmtUser;
 use ssh_server::{authenticator::Authenticator, error::SshError};
-
-use crate::ssh_user::SshUser;
 
 const GIT_USER: &str = "git";
 
@@ -16,7 +15,7 @@ impl DbAuthenticator {
 }
 
 impl Authenticator for DbAuthenticator {
-  type User = SshUser;
+  type User = GmtUser;
 
   fn validate_public_key(
     &self,
@@ -29,7 +28,7 @@ impl Authenticator for DbAuthenticator {
 
     // TODO: Add Connected user check
 
-    Ok(Some(SshUser::Public))
+    Ok(Some(GmtUser::Public))
   }
 }
 
@@ -59,6 +58,6 @@ mod test {
 
     let user = auth.validate_public_key("git", &unknown_key());
     let user = user.expect("No error should be returned");
-    assert_eq!(user, Some(SshUser::Public));
+    assert_eq!(user, Some(GmtUser::Public));
   }
 }
