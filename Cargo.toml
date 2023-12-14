@@ -4,5 +4,6 @@ members = [
   "git-server",
   "git-server-example",
   "gmt-api",
+  "gmt-server",
   "ssh-server"
 ]
