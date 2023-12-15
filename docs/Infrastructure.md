@@ -10,6 +10,10 @@ Here is a simplified diagram of the project's architecture:
 
 As displayed here, the first iteration will bundle all components into a single server. This will allow for a simpler development and deployment. However, this adds restrictions on the scalability of the project. Later iterations will separate components over different services.
 
+## Design principles
+
+As per best practices and to favor a proper unit testing of the code, it is recommended to design everything with the dependency injection design principle in mind. This will make the code easier to iterate over, as well as provide easily testable indepenedant components.
+
 ## Components
 
 ### Front-End
