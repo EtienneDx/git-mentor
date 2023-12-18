@@ -13,6 +13,7 @@
     "@types/node": "^16.18.68",
     "@types/react": "^18.2.45",
     "@types/react-dom": "^18.2.17",
+    "axios": "^1.6.2",
     "nth-check": "^2.1.1",
     "postcss": "^8.4.32",
     "react": "^18.2.0",
