@@ -1,0 +1,1 @@
+CREATE TYPE CommentAuthor AS ENUM ('User', 'Automated');
