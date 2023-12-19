@@ -1,11 +1,5 @@
 "Create repository": {
-  "Solution 1": {
-    "Duplicate existing empty repository" -> "Done"
-  }
-  "Solution 2": {
-    direction: right
-    "Run `git init`" -> "Copy/simlink hooks" -> "Done"
-  }
+  "Run `git init --bare`" -> "Create simlink hooks" -> "Done"
 }
 "Pre-Receive hook": {
   direction: right
@@ -18,19 +12,41 @@
 }
 "Post-Receive hook": {
   direction: down
-  is_tracked_branch: Is branch tracked {
+  is_repo_part_of_assignement: "Is repository part of an assignment?" {
     shape: diamond
   }
   on_push_workflow: Is there an `on-push` workflow {
     shape: diamond
   }
+  ci_file_exist: "Does the repository have a CI file?" {
+    shape: diamond
+  }
+  make_sqs_request: Make SQS request
+  
+  "Get metadata" -> is_repo_part_of_assignement
+  
+  # CI in repo
+  parse_ci: Parse CI file
   done_1: Done
+  is_repo_part_of_assignement -> ci_file_exist: No
+  ci_file_exist -> done_1: No
+  ci_file_exist -> parse_ci: Yes
+  parse_ci -> make_sqs_request
+  
+  # CI in assignment
+  checkout_ci_repo: Checkout CI repository
+  parse_ci_2: Parse CI file
   done_2: Done
-  clone_validation: Clone validation directory
-  "Get metadata" -> is_tracked_branch
-  is_tracked_branch -> clone_validation: Yes
-  is_tracked_branch -> done_1: No
-  clone_validation -> "Load workflow file" -> on_push_workflow
-  on_push_workflow -> done_2: No
-  on_push_workflow -> "Submit SQS request": Yes
+  has_ci_repo: "Does the assignment have a CI repository?" {
+    shape: diamond
+  }
+  set_status_to_success: Set status to success
+
+  is_repo_part_of_assignement -> has_ci_repo: Yes
+  has_ci_repo -> set_status_to_success: No
+  set_status_to_success -> done_2
+
+  has_ci_repo -> checkout_ci_repo: Yes
+  checkout_ci_repo -> parse_ci_2
+  parse_ci_2 -> "Set status to pending" -> make_sqs_request
 }
