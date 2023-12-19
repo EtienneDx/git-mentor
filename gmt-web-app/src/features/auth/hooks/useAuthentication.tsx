@@ -1,20 +1,19 @@
-import React, { useState } from 'react';
-import axios from 'axios';
+import React, { useState } from "react";
+import axios from "axios";
 
 interface Credentials {
-  email: string;
-  password: string;
+    email: string;
+    password: string;
 }
 
 interface AuthResponse {
-  token: string;
+    token: string;
 }
 
 const useAuthentication = () => {
-    
     const [credentials, setCredentials] = useState<Credentials>({
-        email: '',
-        password: '',
+        email: "",
+        password: "",
     });
     const [token, setToken] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -22,8 +21,8 @@ const useAuthentication = () => {
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
         setCredentials((prevCredentials) => ({
-        ...prevCredentials,
-        [name]: value,
+            ...prevCredentials,
+            [name]: value,
         }));
     };
 
@@ -31,17 +30,20 @@ const useAuthentication = () => {
         e.preventDefault();
 
         try {
-        const response = await axios.post<AuthResponse>('/api/auth/login', credentials);
-        const authToken = response.data.token;
-        setToken(authToken);
-        setError(null);
+            const response = await axios.post<AuthResponse>(
+                "/api/auth/login",
+                credentials
+            );
+            const authToken = response.data.token;
+            setToken(authToken);
+            setError(null);
         } catch (error) {
-        setToken(null);
-        setError('Invalid email or password');
+            setToken(null);
+            setError("Invalid email or password");
         }
     };
-    
-    return {credentials, token, error, handleInputChange, handleFormSubmit};
-}
+
+    return { credentials, token, error, handleInputChange, handleFormSubmit };
+};
 
 export default useAuthentication;

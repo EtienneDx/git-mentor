@@ -3,36 +3,36 @@
 @tailwind utilities;
 
 body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto",
+        "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans",
+        "Helvetica Neue", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
 code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+    font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
+        monospace;
 }
 
 input {
-  border: 1px solid #888;
-  border-radius: 4px;
-  padding: 5px;
-  width: 100%;
+    border: 1px solid #888;
+    border-radius: 4px;
+    padding: 5px;
+    width: 100%;
 }
 
 button {
-  border: 1px solid #888;
-  border-radius: 4px;
-  padding: 5px;
-  width: 100%;
-  cursor: pointer;
+    border: 1px solid #888;
+    border-radius: 4px;
+    padding: 5px;
+    width: 100%;
+    cursor: pointer;
 }
 
 h1 {
-  font-size: 1.5em;
-  text-align: center;
-  color: #115;
+    font-size: 1.5em;
+    text-align: center;
+    color: #115;
 }
