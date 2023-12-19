@@ -1,8 +1,8 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import axios from 'axios';
-import Authentication from '../components/Authentication';
+import Authentication from '../features/auth/Authentication';
 
 jest.mock('axios');
 
