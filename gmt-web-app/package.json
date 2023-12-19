@@ -58,5 +58,8 @@
     "moduleNameMapper": {
       "axios": "axios/dist/node/axios.cjs"
     }
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.3.6"
   }
 }
