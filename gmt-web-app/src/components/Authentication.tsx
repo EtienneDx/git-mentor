@@ -41,15 +41,15 @@ const Authentication: React.FC = () => {
   };
 
   return (
-    <div>
-      <h1>Email-Password Authentication</h1>
+    <div className="flex flex-col flex-wrap content-center justify-center h-screen w-full gap-2">
+      <h1 className="font-bold text-2xl" >Email-Password Authentication</h1>
       {token ? (
         <div>
           <p>Authenticated!</p>
           <p>Token: {token}</p>
         </div>
       ) : (
-        <form onSubmit={handleFormSubmit}>
+        <form onSubmit={handleFormSubmit} className="flex flex-col gap-4">
           <label>
             Email:
             <input
@@ -60,7 +60,6 @@ const Authentication: React.FC = () => {
               required
             />
           </label>
-          <br />
           <label>
             Password:
             <input
@@ -71,7 +70,6 @@ const Authentication: React.FC = () => {
               required
             />
           </label>
-          <br />
           <button type="submit">Login</button>
           {error && <p style={{ color: 'red' }}>{error}</p>}
         </form>

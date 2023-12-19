@@ -3,7 +3,7 @@ import Authentication from './components/Authentication';
 
 const App: React.FC = () => {
   return (
-    <div className="App">
+    <div className="min-h-screen">
       <Authentication />
     </div>
   );
