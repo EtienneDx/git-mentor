@@ -1,13 +1,17 @@
 direction: down
+await_messages: "Await messages" {
+  shape: oval
+}
 existing_runner: Are we using an existing docker runner? {
   shape: diamond
 }
 get_dockerfile: "Get dockerfile for runnner"
 copy_custom: "Copy custom dockerfile"
 build: "Build dockerfile"
-"Clone repositories" -> "Parse workflow" -> existing_runner
+
+await_messages -> "Clone repositories" -> "Parse workflow" -> existing_runner
 existing_runner -> get_dockerfile: Yes
 existing_runner -> copy_custom: No
 get_dockerfile -> build
 copy_custom -> build
-build -> "Start docker instance" -> "Monitor logs"
+build -> "Start docker instance" -> "Monitor logs" -> Update status
