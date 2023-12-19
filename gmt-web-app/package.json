@@ -53,7 +53,8 @@
         ]
     },
     "overrides": {
-        "@svgr/webpack": "^8.1.0"
+        "@svgr/webpack": "^8.1.0",
+        "typescript": "^5.3.3"
     },
     "jest": {
         "moduleNameMapper": {
@@ -65,6 +66,7 @@
         "@typescript-eslint/parser": "^6.15.0",
         "eslint": "^8.56.0",
         "eslint-config-prettier": "^9.1.0",
+        "eslint-plugin-jest": "^27.6.0",
         "eslint-plugin-prettier": "^5.0.1",
         "prettier": "^3.1.1",
         "tailwindcss": "^3.3.6",

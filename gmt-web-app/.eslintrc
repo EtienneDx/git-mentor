@@ -16,5 +16,10 @@
             { "max": 75, "skipBlankLines": true, "skipComments": true }
         ],
         "complexity": ["error", 6]
+    },
+    "settings": {
+      "react": {
+        "version": "latest"
+      }
     }
 }
