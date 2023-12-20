@@ -12,6 +12,10 @@ pub mod sql_types {
   #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
   #[diesel(postgres_type(name = "repotype"))]
   pub struct Repotype;
+
+  #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+  #[diesel(postgres_type(name = "status"))]
+  pub struct Status;
 }
 
 diesel::table! {
@@ -21,6 +25,18 @@ diesel::table! {
         base_repo_id -> Int4,
         test_repo_id -> Int4,
         correction_repo_id -> Int4,
+    }
+}
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::Status;
+
+    cirun (id) {
+        id -> Int4,
+        repository_id -> Int4,
+        commit -> Text,
+        status -> Status,
     }
 }
 
@@ -79,6 +95,7 @@ diesel::table! {
 }
 
 diesel::joinable!(assignments -> groups (group_id));
+diesel::joinable!(cirun -> repositories (repository_id));
 diesel::joinable!(comments -> repositories (repository_id));
 diesel::joinable!(comments -> users (author_id));
 diesel::joinable!(group_students -> groups (group_id));
@@ -88,6 +105,7 @@ diesel::joinable!(repositories -> users (owner_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
   assignments,
+  cirun,
   comments,
   group_students,
   groups,
