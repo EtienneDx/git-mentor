@@ -23,7 +23,6 @@
         "react-router-dom": "^6.21.0",
         "react-scripts": "^5.0.1",
         "resolve-url-loader": "^5.0.0",
-        "styled-components": "^6.1.1",
         "web-vitals": "^2.1.4"
     },
     "scripts": {

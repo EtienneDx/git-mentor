@@ -38,9 +38,16 @@ Runs eslint on all typescript files to signal or fix linting.
 Formats all of the files using Prettier.
 
 
+## Project Description
 
-## Learn More
+This project is a React application that serves as a web interface for Git Mentor. It is bootstrapped with Create React App and uses a set of common libraries to enhance its functionality such as:
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+- `React` and `React-DOM`: These are the core libraries that power our application.
+- `TypeScript`: It helps us catch errors early in the development process and enhances our development experience with features like autocompletion, type inference, and type checking. It also makes our code more readable and self-documenting.
+- `React Router DOM`: This library allows us to manage routing.
+- `Axios`: We use this library to make HTTP requests to our Rust backend.
+- `Tailwind CSS`: This library allows us to style our React components, enabling simple and compact styling.
+- `Jest` (via @types/jest): This is our testing framework, which allows us to write unit and integration tests for our components.
+- `ESLint` and `Prettier`: These tools help us maintain a consistent code style and catch potential issues early.
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+We chose not to use `Next.js` for this project because our current needs are well-served by Create React App. Moreover, as the frontend is served by an S3 bucket, the additional features provided by `Next.js` such as server-side rendering and static site generation would have been useless.
