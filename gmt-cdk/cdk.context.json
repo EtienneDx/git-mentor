@@ -1,0 +1,7 @@
+{
+  "availability-zones:account=446114629971:region=eu-west-3": [
+    "eu-west-3a",
+    "eu-west-3b",
+    "eu-west-3c"
+  ]
+}
