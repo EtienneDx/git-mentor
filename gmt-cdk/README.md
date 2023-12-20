@@ -1,6 +1,6 @@
 # Gmt Cdk
 
-This project contains the infrastructure definition for the GMT project. It provides acces to 2 stacks, one holding the
+This project contains the infrastructure definition for the GMT project. It provides access to two stacks, one holding the
 required resources for development only and one holding the full infrastructure to deploy the project. This separation is
 likely to evolve, for example to provide a staging environment. We might also decide to move to a managed service for which
 all the infrastructure will be managed by us and not by the client.
