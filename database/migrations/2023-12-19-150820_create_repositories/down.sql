@@ -1,3 +1,3 @@
-DROP TABLE repositories;
-
 DROP TABLE assignments;
+
+DROP TABLE repositories;
