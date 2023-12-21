@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import RepositoriesAPI from "../services/repositoriesAPI";
 import { Repository } from "../../../helpers/types";
+import { ColumnHeader } from "../components/ColumnHeader";
+import { ColumnContent } from "../components/ColumnContent";
 
 const RepositoriesList = () => {
   const [repositories, setRepositories] = useState<Repository[]>([]);
@@ -19,10 +21,19 @@ const RepositoriesList = () => {
       {repositories.length === 0 ? (
         <h1>Loading Repositories...</h1>
       ) : (
-        <div>
-          {repositories.map((repository) => (
-            <div key={repository.id}>{repository.name}</div>
-          ))}
+        <div className="flex flex-col justify-stretch">
+          <table>
+            <tr>
+              <ColumnHeader title="Name" />
+              <ColumnHeader title="Creation Date" />
+            </tr>
+            {repositories.map((repo) => (
+              <tr key={repo.id}>
+                <ColumnContent content={repo.name} />
+                <ColumnContent content={repo.creationDate.toDateString()} />
+              </tr>
+            ))}
+          </table>
         </div>
       )}
     </div>
