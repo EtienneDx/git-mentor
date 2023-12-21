@@ -3,9 +3,15 @@ import GroupsAPI from "../services/groupsAPI";
 import { Group } from "../../../helpers/types";
 import { ColumnHeader } from "../components/ColumnHeader";
 import { ColumnContent } from "../components/ColumnContent";
+import { useNavigate } from "react-router-dom";
 
 const Groups = () => {
   const [groups, setGroups] = useState<Group[]>([]);
+  const navigate = useNavigate();
+
+  const onRowClick = (id: string) => {
+    navigate("/groups/" + id);
+  };
 
   useEffect(() => {
     const loadGroups = async () => {
@@ -28,7 +34,11 @@ const Groups = () => {
               <ColumnHeader title="Creation Date" />
             </tr>
             {groups.map((group) => (
-              <tr key={group.id}>
+              <tr
+                key={group.id}
+                onClick={() => onRowClick(group.id)}
+                className="cursor-pointer"
+              >
                 <ColumnContent content={group.name} />
                 <ColumnContent content={group.creationDate.toDateString()} />
               </tr>
