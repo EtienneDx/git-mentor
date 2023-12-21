@@ -144,7 +144,7 @@ pub struct Comment {
 
 #[derive(Debug, AsExpression, FromSqlRow)]
 #[diesel(sql_type = crate::schema::sql_types::Status)]
-enum Status {
+pub enum Status {
   Success,
   Pending,
   Cancelled,
@@ -178,7 +178,7 @@ impl FromSql<crate::schema::sql_types::Status, Pg> for Status {
 #[derive(Queryable, Selectable)]
 #[diesel(table_name = crate::schema::cirun)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
-struct CiRun {
+pub struct CiRun {
   pub id: i32,
   pub repository_id: i32,
   pub commit: String,
