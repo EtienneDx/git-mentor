@@ -5,7 +5,7 @@ const StudentsRouter = () => {
   return (
     <Routes>
       <Route path="/" Component={StudentsList} />
-    </ Routes>
+    </Routes>
   );
 };
 
