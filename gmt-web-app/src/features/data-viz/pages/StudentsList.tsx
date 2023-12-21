@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import StudentsAPI from "../services/studentsAPI";
 import { Student } from "../../../helpers/types";
+import { ColumnContent } from "../components/ColumnContent";
+import { ColumnHeader } from "../components/ColumnHeader";
 
 const StudentsList = () => {
   const [students, setStudents] = useState<Student[]>([]);
@@ -19,10 +21,19 @@ const StudentsList = () => {
       {students.length === 0 ? (
         <h1>Loading Students...</h1>
       ) : (
-        <div>
-          {students.map((student) => (
-            <div key={student.id}>{student.name}</div>
-          ))}
+        <div className="flex flex-col justify-stretch">
+          <table>
+            <tr>
+              <ColumnHeader title="Name" />
+              <ColumnHeader title="Creation Date" />
+            </tr>
+            {students.map((stud) => (
+              <tr key={stud.id}>
+                <ColumnContent content={stud.name} />
+                <ColumnContent content={stud.creationDate.toDateString()} />
+              </tr>
+            ))}
+          </table>
         </div>
       )}
     </div>
