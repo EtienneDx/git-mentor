@@ -37,7 +37,6 @@ Runs eslint on all typescript files to signal or fix linting.
 
 Formats all of the files using Prettier.
 
-
 ## Project Description
 
 This project is a React application that serves as a web interface for Git Mentor. It is bootstrapped with Create React App and uses a set of common libraries to enhance its functionality such as:
