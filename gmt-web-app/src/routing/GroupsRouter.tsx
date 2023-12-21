@@ -5,11 +5,11 @@ import GroupStudents from "../features/data-viz/pages/GroupStudents";
 
 const GroupsRouter = () => {
   return (
-    <Routes >
+    <Routes>
       <Route index Component={GroupsList} />
       <Route path=":groupId" Component={GroupAssignements} />
       <Route path=":groupId/students" Component={GroupStudents} />
-    </ Routes>
+    </Routes>
   );
 };
 

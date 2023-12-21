@@ -3,9 +3,9 @@ import RepositoriesList from "../features/data-viz/pages/RepositoriesList";
 
 const RepositoriesRouter = () => {
   return (
-    <Routes >
+    <Routes>
       <Route index Component={RepositoriesList} />
-    </ Routes>
+    </Routes>
   );
 };
 

@@ -31,7 +31,7 @@ const useAuthentication = () => {
       const data = await login(credentials);
       setToken(data.token);
       setError(null);
-      navigate('/groups', { replace: true });
+      navigate("/groups", { replace: true });
     } catch (error) {
       setToken(null);
       setError("Invalid email or password");
