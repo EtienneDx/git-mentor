@@ -1,14 +1,13 @@
-import React from "react";
 import { render, screen } from "@testing-library/react";
-import App from "../App";
+import Router from "../routing/Router";
 
 describe("App Component", () => {
   it("renders without crashing", () => {
-    render(<App />);
+    render(<Router />);
   });
 
   it("renders the Authentication component", () => {
-    render(<App />);
+    render(<Router />);
     expect(screen.getByText(/login/i)).toBeInTheDocument();
   });
 });
