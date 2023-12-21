@@ -1,16 +1,14 @@
 import React, { useState } from "react";
-import axios from "axios";
+import { login } from "../helpers/services";
+import { useNavigate } from "react-router-dom";
 
 interface Credentials {
   email: string;
   password: string;
 }
 
-interface AuthResponse {
-  token: string;
-}
-
 const useAuthentication = () => {
+  const navigate = useNavigate();
   const [credentials, setCredentials] = useState<Credentials>({
     email: "",
     password: "",
@@ -30,13 +28,10 @@ const useAuthentication = () => {
     e.preventDefault();
 
     try {
-      const response = await axios.post<AuthResponse>(
-        "/api/auth/login",
-        credentials
-      );
-      const authToken = response.data.token;
-      setToken(authToken);
+      const data = await login(credentials);
+      setToken(data.token);
       setError(null);
+      navigate('/groups', { replace: true });
     } catch (error) {
       setToken(null);
       setError("Invalid email or password");
