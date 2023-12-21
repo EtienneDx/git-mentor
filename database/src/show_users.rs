@@ -6,12 +6,12 @@ fn main() {
     use self::schema::users::dsl::*;
 
     let connection = &mut establish_connection();
-    let results = posts
+    let results = users
         .filter(published.eq(true))
         .limit(5)
         .select(User::as_select())
         .load(connection)
-        .expect("Error loading posts");
+        .expect("Error loading users");
 
     println!("Displaying {} users", results.len());
     for post in results {
