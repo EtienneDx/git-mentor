@@ -14,9 +14,9 @@ fn main() {
         .expect("Error loading users");
 
     println!("Displaying {} users", results.len());
-    for post in results {
-        println!("{}", post.username);
+    for user in results {
+        println!("{}", user.username);
         println!("-----------\n");
-        println!("{}", post.email);
+        println!("{}", user.email);
     }
 }
