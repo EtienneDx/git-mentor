@@ -12,7 +12,7 @@ pub struct User {
   pub id: i32,
   pub username: String,
   pub email: String,
-  //pub pubkey: Option<String>,
+  pub pubkey: Vec<Option<String>>,
 }
 
 #[derive(Debug, AsExpression, FromSqlRow)]
@@ -139,7 +139,7 @@ pub struct Comment {
   pub message: String,
   pub author_type: Commentauthor,
   pub author_id: i32,
-  //pub date: Date,
+  pub date: std::time::SystemTime,
 }
 
 #[derive(Debug, AsExpression, FromSqlRow)]
