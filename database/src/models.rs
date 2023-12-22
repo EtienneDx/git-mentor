@@ -15,6 +15,14 @@ pub struct User {
   pub pubkey: Vec<Option<String>>,
 }
 
+#[derive(Insertable)]
+#[diesel(table_name = crate::schema::users)]
+pub struct NewUser<'a> {
+  pub username: &'a str,
+  pub email: &'a str,
+  pub pubkey: &'a Vec<Option<String>>,
+}
+
 #[derive(Debug, AsExpression, FromSqlRow)]
 #[diesel(sql_type = crate::schema::sql_types::Repotype)]
 pub enum Repotype {
@@ -52,6 +60,14 @@ pub struct Repository {
   pub owner_id: i32,
 }
 
+#[derive(Insertable)]
+#[diesel(table_name = crate::schema::repositories)]
+pub struct NewRepository<'a> {
+  pub name: &'a str,
+  pub repo_type: &'a Repotype,
+  pub owner_id: i32,
+}
+
 #[derive(Queryable, Selectable)]
 #[diesel(table_name = crate::schema::groups)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
@@ -60,11 +76,42 @@ pub struct Group {
   pub teacher_id: i32,
 }
 
+#[derive(Insertable)]
+#[diesel(table_name = crate::schema::groups)]
+pub struct NewGroup {
+  pub teacher_id: i32,
+}
+
+#[derive(Queryable, Selectable)]
+#[diesel(table_name = crate::schema::group_students)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct GroupStudent {
+  pub group_id: i32,
+  pub student_id: i32,
+}
+
+#[derive(Insertable)]
+#[diesel(table_name = crate::schema::group_students)]
+pub struct NewGroupStudent {
+  pub group_id: i32,
+  pub student_id: i32,
+}
+
+
 #[derive(Queryable, Selectable)]
 #[diesel(table_name = crate::schema::assignments)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Assignment {
   pub id: i32,
+  pub group_id: i32,
+  pub base_repo_id: i32,
+  pub test_repo_id: i32,
+  pub correction_repo_id: i32,
+}
+
+#[derive(Insertable)]
+#[diesel(table_name = crate::schema::assignments)]
+pub struct NewAssignment {
   pub group_id: i32,
   pub base_repo_id: i32,
   pub test_repo_id: i32,
@@ -142,6 +189,18 @@ pub struct Comment {
   pub date: std::time::SystemTime,
 }
 
+#[derive(Insertable)]
+#[diesel(table_name = crate::schema::comments)]
+pub struct NewComment<'a> {
+  pub repository_id: i32,
+  pub commit_hash: &'a str,
+  pub comment_type: &'a Commenttype,
+  pub message: &'a str,
+  pub author_type: &'a Commentauthor,
+  pub author_id: i32,
+  pub date:  &'a std::time::SystemTime,
+}
+
 #[derive(Debug, AsExpression, FromSqlRow)]
 #[diesel(sql_type = crate::schema::sql_types::Status)]
 pub enum Status {
@@ -178,9 +237,17 @@ impl FromSql<crate::schema::sql_types::Status, Pg> for Status {
 #[derive(Queryable, Selectable)]
 #[diesel(table_name = crate::schema::cirun)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
-pub struct CiRun {
+pub struct Cirun {
   pub id: i32,
   pub repository_id: i32,
   pub commit: String,
   pub status: Status,
+}
+
+#[derive(Insertable)]
+#[diesel(table_name = crate::schema::cirun)]
+pub struct NewCirun<'a> {
+  pub repository_id: i32,
+  pub commit: &'a str,
+  pub status: &'a Status,
 }
