@@ -4,6 +4,9 @@ use dotenvy::dotenv;
 use std::env;
 use self::models::*;
 
+pub mod models;
+pub mod schema;
+
 pub fn establish_connection() -> PgConnection {
   dotenv().ok();
 
@@ -12,244 +15,255 @@ pub fn establish_connection() -> PgConnection {
     .unwrap_or_else(|_| panic!("Error connecting to {}", database_url))
 }
 
-pub mod models;
-pub mod schema;
+impl User {
+    pub fn create(conn: &mut PgConnection, username: &str, email: &str, pubkey: &Vec<Option<String>>) -> User {
+        use crate::schema::users;
 
-pub fn create_user(conn: &mut PgConnection, username: &str, email: &str, pubkey: &Vec<Option<String>>) -> User {
-    use crate::schema::users;
+        let new_user = NewUser { username, email, pubkey };
 
-    let new_user = NewUser { username, email, pubkey };
+        diesel::insert_into(users::table)
+            .values(&new_user)
+            .returning(User::as_returning())
+            .get_result(conn)
+            .expect("Error saving new user")
+    }
 
-    diesel::insert_into(users::table)
-        .values(&new_user)
-        .returning(User::as_returning())
-        .get_result(conn)
-        .expect("Error saving new user")
-}
+    pub fn get_with_username(conn: &mut PgConnection, username: &str) -> Option<User> {
+        use crate::schema::users::dsl;
 
-pub fn get_user(conn: &mut PgConnection, username: &str) -> Option<User> {
-    use crate::schema::users::dsl;
+        let user  = dsl::users
+            .filter(dsl::username.eq(username))
+            .select(User::as_select())
+            .first(conn)
+            .optional();
+        match user {
+            Ok(user) => user,
+            Err(_) => None,
+        }
+    }
 
-    let user  = dsl::users
-        .filter(dsl::username.eq(username))
-        .select(User::as_select())
-        .first(conn)
-        .optional();
-    match user {
-        Ok(user) => user,
-        Err(_) => None,
+    pub fn delete(conn: &mut PgConnection, user_id: i32) -> bool {
+        use crate::schema::users::dsl::users;
+
+        diesel::delete(users.find(user_id))
+            .execute(conn)
+            .is_ok()
     }
 }
 
-pub fn delete_user(conn: &mut PgConnection, user_id: i32) -> bool {
-    use crate::schema::users::dsl::users;
+impl Repository{
+    pub fn create(conn: &mut PgConnection, name: &str, repo_type: &Repotype, owner_id: i32) -> Repository {
+        use crate::schema::repositories;
 
-    diesel::delete(users.find(user_id))
-        .execute(conn)
-        .is_ok()
-}
+        let new_repository = NewRepository { name, repo_type, owner_id };
 
-pub fn create_repository(conn: &mut PgConnection, name: &str, repo_type: &Repotype, owner_id: i32) -> Repository {
-    use crate::schema::repositories;
+        diesel::insert_into(repositories::table)
+            .values(&new_repository)
+            .returning(Repository::as_returning())
+            .get_result(conn)
+            .expect("Error saving new repository")
+    }
 
-    let new_repository = NewRepository { name, repo_type, owner_id };
+    pub fn get_with_name(conn: &mut PgConnection, name: &str) -> Option<Repository> {
+        use crate::schema::repositories::dsl;
 
-    diesel::insert_into(repositories::table)
-        .values(&new_repository)
-        .returning(Repository::as_returning())
-        .get_result(conn)
-        .expect("Error saving new repository")
-}
+        let repository  = dsl::repositories
+            .filter(dsl::name.eq(name))
+            .select(Repository::as_select())
+            .first(conn)
+            .optional();
+        match repository {
+            Ok(repository) => repository,
+            Err(_) => None,
+        }
+    }
 
-pub fn get_repository(conn: &mut PgConnection, name: &str) -> Option<Repository> {
-    use crate::schema::repositories::dsl;
+    pub fn delete(conn: &mut PgConnection, repository_id: i32) -> bool {
+        use crate::schema::repositories::dsl::repositories;
 
-    let repository  = dsl::repositories
-        .filter(dsl::name.eq(name))
-        .select(Repository::as_select())
-        .first(conn)
-        .optional();
-    match repository {
-        Ok(repository) => repository,
-        Err(_) => None,
+        diesel::delete(repositories.find(repository_id))
+            .execute(conn)
+            .is_ok()
     }
 }
 
-pub fn delete_repository(conn: &mut PgConnection, repository_id: i32) -> bool {
-    use crate::schema::repositories::dsl::repositories;
+impl Group{
+    pub fn create(conn: &mut PgConnection, teacher_id: i32) -> Group {
+        use crate::schema::groups;
 
-    diesel::delete(repositories.find(repository_id))
-        .execute(conn)
-        .is_ok()
-}
+        let new_group = NewGroup { teacher_id };
 
-pub fn create_group(conn: &mut PgConnection, teacher_id: i32) -> Group {
-    use crate::schema::groups;
+        diesel::insert_into(groups::table)
+            .values(&new_group)
+            .returning(Group::as_returning())
+            .get_result(conn)
+            .expect("Error saving new group")
+    }
 
-    let new_group = NewGroup { teacher_id };
+    pub fn get_with_id(conn: &mut PgConnection, group_id: i32) -> Option<Group> {
+        use crate::schema::groups::dsl;
 
-    diesel::insert_into(groups::table)
-        .values(&new_group)
-        .returning(Group::as_returning())
-        .get_result(conn)
-        .expect("Error saving new group")
-}
+        let group  = dsl::groups
+            .filter(dsl::id.eq(group_id))
+            .select(Group::as_select())
+            .first(conn)
+            .optional();
+        match group {
+            Ok(group) => group,
+            Err(_) => None,
+        }
+    }
 
-pub fn get_group(conn: &mut PgConnection, group_id: i32) -> Option<Group> {
-    use crate::schema::groups::dsl;
+    pub fn delete(conn: &mut PgConnection, group_id: i32) -> bool {
+        use crate::schema::groups::dsl::groups;
 
-    let group  = dsl::groups
-        .filter(dsl::id.eq(group_id))
-        .select(Group::as_select())
-        .first(conn)
-        .optional();
-    match group {
-        Ok(group) => group,
-        Err(_) => None,
+        diesel::delete(groups.find(group_id))
+            .execute(conn)
+            .is_ok()
     }
 }
 
-pub fn delete_group(conn: &mut PgConnection, group_id: i32) -> bool {
-    use crate::schema::groups::dsl::groups;
+impl Assignment{
+    pub fn create(conn: &mut PgConnection, group_id: i32, base_repo_id: i32, test_repo_id: i32, correction_repo_id: i32) -> Assignment {
+        use crate::schema::assignments;
 
-    diesel::delete(groups.find(group_id))
-        .execute(conn)
-        .is_ok()
-}
+        let new_assignment = NewAssignment { group_id, base_repo_id, test_repo_id, correction_repo_id };
 
-pub fn create_assignment(conn: &mut PgConnection, group_id: i32, base_repo_id: i32, test_repo_id: i32, correction_repo_id: i32) -> Assignment {
-    use crate::schema::assignments;
+        diesel::insert_into(assignments::table)
+            .values(&new_assignment)
+            .returning(Assignment::as_returning())
+            .get_result(conn)
+            .expect("Error saving new assignment")
+    }
 
-    let new_assignment = NewAssignment { group_id, base_repo_id, test_repo_id, correction_repo_id };
+    pub fn get_with_id(conn: &mut PgConnection, assignment_id: i32) -> Option<Assignment> {
+        use crate::schema::assignments::dsl;
 
-    diesel::insert_into(assignments::table)
-        .values(&new_assignment)
-        .returning(Assignment::as_returning())
-        .get_result(conn)
-        .expect("Error saving new assignment")
-}
+        let assignment  = dsl::assignments
+            .filter(dsl::id.eq(assignment_id))
+            .select(Assignment::as_select())
+            .first(conn)
+            .optional();
+        match assignment {
+            Ok(assignment) => assignment,
+            Err(_) => None,
+        }
+    }
 
-pub fn get_assignment(conn: &mut PgConnection, assignment_id: i32) -> Option<Assignment> {
-    use crate::schema::assignments::dsl;
+    pub fn delete(conn: &mut PgConnection, assignment_id: i32) -> bool {
+        use crate::schema::assignments::dsl::assignments;
 
-    let assignment  = dsl::assignments
-        .filter(dsl::id.eq(assignment_id))
-        .select(Assignment::as_select())
-        .first(conn)
-        .optional();
-    match assignment {
-        Ok(assignment) => assignment,
-        Err(_) => None,
+        diesel::delete(assignments.find(assignment_id))
+            .execute(conn)
+            .is_ok()
     }
 }
 
-pub fn delete_assignment(conn: &mut PgConnection, assignment_id: i32) -> bool {
-    use crate::schema::assignments::dsl::assignments;
+impl GroupStudent{
+    pub fn create(conn: &mut PgConnection, group_id: i32, student_id: i32) -> GroupStudent {
+        use crate::schema::group_students;
 
-    diesel::delete(assignments.find(assignment_id))
-        .execute(conn)
-        .is_ok()
-}
+        let new_group_student = NewGroupStudent { group_id, student_id };
 
-pub fn create_group_student(conn: &mut PgConnection, group_id: i32, student_id: i32) -> GroupStudent {
-    use crate::schema::group_students;
+        diesel::insert_into(group_students::table)
+            .values(&new_group_student)
+            .returning(GroupStudent::as_returning())
+            .get_result(conn)
+            .expect("Error saving new group_student")
+    }
 
-    let new_group_student = NewGroupStudent { group_id, student_id };
+    pub fn get_with_ids(conn: &mut PgConnection, group_id: i32, student_id: i32) -> Option<GroupStudent> {
+        use crate::schema::group_students::dsl;
 
-    diesel::insert_into(group_students::table)
-        .values(&new_group_student)
-        .returning(GroupStudent::as_returning())
-        .get_result(conn)
-        .expect("Error saving new group_student")
-}
+        let group_student  = dsl::group_students
+            .filter(dsl::group_id.eq(group_id))
+            .filter(dsl::student_id.eq(student_id))
+            .select(GroupStudent::as_select())
+            .first(conn)
+            .optional();
+        match group_student {
+            Ok(group_student) => group_student,
+            Err(_) => None,
+        }
+    }
 
-pub fn get_group_student(conn: &mut PgConnection, group_id: i32, student_id: i32) -> Option<GroupStudent> {
-    use crate::schema::group_students::dsl;
+    pub fn delete(conn: &mut PgConnection, group_id: i32, student_id: i32) -> bool {
+        use crate::schema::group_students::dsl::group_students;
 
-    let group_student  = dsl::group_students
-        .filter(dsl::group_id.eq(group_id))
-        .filter(dsl::student_id.eq(student_id))
-        .select(GroupStudent::as_select())
-        .first(conn)
-        .optional();
-    match group_student {
-        Ok(group_student) => group_student,
-        Err(_) => None,
+        diesel::delete(group_students.find((group_id, student_id)))
+            .execute(conn)
+            .is_ok()
     }
 }
 
-pub fn delete_group_student(conn: &mut PgConnection, group_id: i32, student_id: i32) -> bool {
-    use crate::schema::group_students::dsl::group_students;
+impl Cirun{
+    pub fn create(conn: &mut PgConnection, repository_id: i32, commit: &str, status: &Status) -> Cirun {
+        use crate::schema::cirun;
 
-    diesel::delete(group_students.find((group_id, student_id)))
-        .execute(conn)
-        .is_ok()
-}
+        let new_cirun = NewCirun { repository_id, commit, status };
 
-pub fn create_cirun(conn: &mut PgConnection, repository_id: i32, commit: &str, status: &Status) -> Cirun {
-    use crate::schema::cirun;
+        diesel::insert_into(cirun::table)
+            .values(&new_cirun)
+            .returning(Cirun::as_returning())
+            .get_result(conn)
+            .expect("Error saving new cirun")
+    }
 
-    let new_cirun = NewCirun { repository_id, commit, status };
+    pub fn get_with_id(conn: &mut PgConnection, cirun_id: i32) -> Option<Cirun> {
+        use crate::schema::cirun::dsl;
 
-    diesel::insert_into(cirun::table)
-        .values(&new_cirun)
-        .returning(Cirun::as_returning())
-        .get_result(conn)
-        .expect("Error saving new cirun")
-}
+        let cirun  = dsl::cirun
+            .filter(dsl::id.eq(cirun_id))
+            .select(Cirun::as_select())
+            .first(conn)
+            .optional();
+        match cirun {
+            Ok(cirun) => cirun,
+            Err(_) => None,
+        }
+    }
 
-pub fn get_cirun(conn: &mut PgConnection, cirun_id: i32) -> Option<Cirun> {
-    use crate::schema::cirun::dsl;
+    pub fn delete(conn: &mut PgConnection, cirun_id: i32) -> bool {
+        use crate::schema::cirun::dsl::cirun;
 
-    let cirun  = dsl::cirun
-        .filter(dsl::id.eq(cirun_id))
-        .select(Cirun::as_select())
-        .first(conn)
-        .optional();
-    match cirun {
-        Ok(cirun) => cirun,
-        Err(_) => None,
+        diesel::delete(cirun.find(cirun_id))
+            .execute(conn)
+            .is_ok()
     }
 }
 
-pub fn delete_cirun(conn: &mut PgConnection, cirun_id: i32) -> bool {
-    use crate::schema::cirun::dsl::cirun;
+impl Comment {
+    pub fn create(conn: &mut PgConnection, repository_id: i32, commit_hash: &str, comment_type: &Commenttype, message: &str, author_type: &Commentauthor, author_id: i32, date: &std::time::SystemTime) -> Comment {
+        use crate::schema::comments;
 
-    diesel::delete(cirun.find(cirun_id))
-        .execute(conn)
-        .is_ok()
-}
+        let new_comment = NewComment { repository_id, commit_hash, comment_type, message, author_type, author_id, date };
 
-pub fn create_comment(conn: &mut PgConnection, repository_id: i32, commit_hash: &str, comment_type: &Commenttype, message: &str, author_type: &Commentauthor, author_id: i32, date: &std::time::SystemTime) -> Comment {
-    use crate::schema::comments;
-
-    let new_comment = NewComment { repository_id, commit_hash, comment_type, message, author_type, author_id, date };
-
-    diesel::insert_into(comments::table)
-        .values(&new_comment)
-        .returning(Comment::as_returning())
-        .get_result(conn)
-        .expect("Error saving new comment")
-}
-
-pub fn get_comment(conn: &mut PgConnection, comment_id: i32) -> Option<Comment> {
-    use crate::schema::comments::dsl;
-
-    let comment  = dsl::comments
-        .filter(dsl::id.eq(comment_id))
-        .select(Comment::as_select())
-        .first(conn)
-        .optional();
-    match comment {
-        Ok(comment) => comment,
-        Err(_) => None,
+        diesel::insert_into(comments::table)
+            .values(&new_comment)
+            .returning(Comment::as_returning())
+            .get_result(conn)
+            .expect("Error saving new comment")
     }
-}
 
-pub fn delete_comment(conn: &mut PgConnection, comment_id: i32) -> bool {
-    use crate::schema::comments::dsl::comments;
+    pub fn get_with_id(conn: &mut PgConnection, comment_id: i32) -> Option<Comment> {
+        use crate::schema::comments::dsl;
 
-    diesel::delete(comments.find(comment_id))
-        .execute(conn)
-        .is_ok()
+        let comment  = dsl::comments
+            .filter(dsl::id.eq(comment_id))
+            .select(Comment::as_select())
+            .first(conn)
+            .optional();
+        match comment {
+            Ok(comment) => comment,
+            Err(_) => None,
+        }
+    }
+
+    pub fn delete(conn: &mut PgConnection, comment_id: i32) -> bool {
+        use crate::schema::comments::dsl::comments;
+
+        diesel::delete(comments.find(comment_id))
+            .execute(conn)
+            .is_ok()
+    }
 }
