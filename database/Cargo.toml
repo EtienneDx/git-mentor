@@ -9,3 +9,4 @@ edition = "2021"
 diesel = { version = "2.1.0", features = ["postgres"] }
 dotenvy = "0.15"
 chrono = "0.4.31"
+diesel_migrations = "2.1.0"
