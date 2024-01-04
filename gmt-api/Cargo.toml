@@ -6,9 +6,15 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-axum = "0.7.2"
+axum = { version = "0.7.2", features = ["macros"] }
+axum-extra = "0.7.2"
 tokio = { version = "1", features = ["full"] }
-tracing = "0.1"
+gmt-common = { path = "../gmt-common" }
+serde_json = "1.0.108"
+serde = { version = "1.0", features = ["derive"] }
+log = "0.4.20"
+simple_logger = "4.2.0"
+thiserror = "1.0.50"
 
 [dependencies.tracing-subscriber]
 version = "0.3.18"

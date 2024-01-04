@@ -1,15 +1,23 @@
+use log::info;
 use tokio::net::TcpListener;
-use tracing_subscriber::fmt;
 
 mod handlers;
+mod json;
 mod routes;
 
 #[tokio::main]
 async fn main() {
-  fmt::init();
+  simple_logger::SimpleLogger::new()
+    .with_level(log::LevelFilter::Info)
+    .env()
+    .init()
+    .unwrap();
+  info!("Logger initialized");
 
   let app = routes::create_app();
 
   let listener = TcpListener::bind("0.0.0.0:3000").await.unwrap();
-  axum::serve(listener, app).await.unwrap();
+  let server = axum::serve(listener, app);
+  info!("Server listening on port 3000");
+  server.await.unwrap();
 }
