@@ -26,14 +26,15 @@
         "web-vitals": "^2.1.4"
     },
     "scripts": {
-        "start": "react-scripts start",
-        "build": "react-scripts build",
-        "test": "react-scripts test",
+        "start": "npm run generate-proto && react-scripts start",
+        "build": "npm run generate-proto && react-scripts build",
+        "test": "npm run generate-proto && react-scripts test",
         "eject": "react-scripts eject",
         "lint": "eslint . --ext .ts,.tsx",
         "lint:fix": "eslint . --ext .ts,.tsx --fix",
         "format": "prettier . --write",
-        "format:check": "prettier ."
+        "format:check": "prettier .",
+        "generate-proto": "npx pbjs -t static-module -w commonjs -o ./src/proto.js ../gmt-protobuf/messages.proto && npx pbts -o ./src/proto.d.ts ./src/proto.js"
     },
     "eslintConfig": {
         "extends": [
@@ -70,6 +71,7 @@
         "eslint-plugin-jest": "^27.6.0",
         "eslint-plugin-prettier": "^5.0.1",
         "prettier": "^3.1.1",
+        "protobufjs-cli": "^1.1.2",
         "tailwindcss": "^3.3.6",
         "typescript": "^5.3.3"
     }

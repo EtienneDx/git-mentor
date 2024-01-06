@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package messages;
+
+enum ErrorCode {
+  UNKNOWN = 0;
+  INVALID_PAYLOAD = 1;
+  UNIMPLEMENTED = 2;
+}
+
+message Error {
+  string msg = 1;
+  ErrorCode code = 2;
+}
+
+message LoginRequest {
+  string username = 1;
+  string password = 2;
+}
+
+message LoginResponse {
+  string token = 2;
+}
