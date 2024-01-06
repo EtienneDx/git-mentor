@@ -6,6 +6,14 @@ This project was bootstrapped with [Create React App](https://github.com/faceboo
 
 In the project directory, you can run:
 
+### `npm run generate-proto`
+
+Generates the TypeScript types for the protobuf files in the `gmt-protobuf` project. This script is automatically run when building or starting the project.
+
+This script needs to run in order for the project to build or run. If you are getting errors about missing types, run this script and try again.
+
+To run this script, you need to have the `protoc` compiler installed. You can install it by following the instructions [here](https://grpc.io/docs/protoc-installation/).
+
 ### `npm start`
 
 Runs the app in the development mode.\
