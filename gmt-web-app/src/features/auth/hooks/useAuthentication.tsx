@@ -1,18 +1,10 @@
 import React, { useState } from "react";
-import axios from "axios";
-
-interface Credentials {
-  email: string;
-  password: string;
-}
-
-interface AuthResponse {
-  token: string;
-}
+import { login } from "@/api/auth";
+import { LoginRequest } from "@/proto";
 
 const useAuthentication = () => {
-  const [credentials, setCredentials] = useState<Credentials>({
-    email: "",
+  const [credentials, setCredentials] = useState<LoginRequest>({
+    username: "",
     password: "",
   });
   const [token, setToken] = useState<string | null>(null);
@@ -29,17 +21,14 @@ const useAuthentication = () => {
   const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    try {
-      const response = await axios.post<AuthResponse>(
-        "/api/auth/login",
-        credentials
-      );
-      const authToken = response.data.token;
-      setToken(authToken);
+    const response = await login(credentials);
+
+    if (response.success) {
+      setToken(response.data.token);
       setError(null);
-    } catch (error) {
+    } else {
       setToken(null);
-      setError("Invalid email or password");
+      setError(response.error.msg);
     }
   };
 

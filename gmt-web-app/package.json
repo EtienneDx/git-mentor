@@ -2,7 +2,6 @@
     "name": "gmt-web-app",
     "version": "0.1.0",
     "private": true,
-    "type": "module",
     "testEnvironment": "jsdom",
     "dependencies": {
         "@fortawesome/fontawesome-svg-core": "^6.5.1",
@@ -26,15 +25,15 @@
         "web-vitals": "^2.1.4"
     },
     "scripts": {
-        "start": "npm run generate-proto && react-scripts start",
-        "build": "npm run generate-proto && react-scripts build",
-        "test": "npm run generate-proto && react-scripts test",
+        "start": "npm run generate-proto && react-app-rewired start",
+        "build": "npm run generate-proto && react-app-rewired build",
+        "test": "npm run generate-proto && react-app-rewired test",
         "eject": "react-scripts eject",
         "lint": "eslint . --ext .ts,.tsx",
         "lint:fix": "eslint . --ext .ts,.tsx --fix",
         "format": "prettier . --write",
         "format:check": "prettier .",
-        "generate-proto": "npx pbjs -t static-module -w commonjs -o ./src/proto.js ../gmt-protobuf/messages.proto && npx pbts -o ./src/proto.d.ts ./src/proto.js"
+        "generate-proto": "npx -p pbjs pbjs ../gmt-protobuf/messages.proto --ts src/proto.ts"
     },
     "eslintConfig": {
         "extends": [
@@ -72,6 +71,7 @@
         "eslint-plugin-prettier": "^5.0.1",
         "prettier": "^3.1.1",
         "protobufjs-cli": "^1.1.2",
+        "react-app-rewired": "^2.2.1",
         "tailwindcss": "^3.3.6",
         "typescript": "^5.3.3"
     }

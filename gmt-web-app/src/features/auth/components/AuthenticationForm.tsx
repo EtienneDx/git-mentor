@@ -14,11 +14,11 @@ const AuthenticationForm: React.FC = () => {
       ) : (
         <form onSubmit={handleFormSubmit} className="flex flex-col gap-4">
           <label>
-            Email:
+            Username:
             <input
-              type="email"
-              name="email"
-              value={credentials.email}
+              type="string"
+              name="username"
+              value={credentials.username}
               onChange={handleInputChange}
               required
             />
