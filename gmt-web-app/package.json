@@ -30,10 +30,11 @@
         "build": "react-scripts build",
         "test": "react-scripts test",
         "eject": "react-scripts eject",
-        "lint": "eslint . --ext .ts,.tsx",
-        "lint:fix": "eslint . --ext .ts,.tsx --fix",
-        "format": "prettier . --write",
-        "format:check": "prettier ."
+        "lint": "eslint ./src --ext .ts,.tsx",
+        "lint:fix": "eslint ./src --ext .ts,.tsx --fix",
+        "format": "prettier ./src --write",
+        "format:check": "prettier ./src",
+        "make-sdk": "openapi --input ../../../../../gmt-api/openapi/main_service.json --output ./src/gmt-api --postfixServices \"\" --name \"main_service\""
     },
     "eslintConfig": {
         "extends": [
@@ -71,6 +72,7 @@
         "eslint-plugin-prettier": "^5.0.1",
         "prettier": "^3.1.1",
         "tailwindcss": "^3.3.6",
-        "typescript": "^5.3.3"
+        "typescript": "^5.3.3",
+        "openapi-typescript-codegen": "^0.27.0"
     }
 }
