@@ -1,4 +1,7 @@
-use poem_openapi::{payload::{Json, PlainText}, Object, OpenApi};
+use poem_openapi::{
+  payload::{Json, PlainText},
+  Object, OpenApi,
+};
 
 pub struct HelloService;
 
