@@ -4,6 +4,7 @@ pub mod handler;
 pub mod server;
 mod ssh_server;
 pub mod user;
+pub mod wrapper;
 
 pub use crate::ssh_server::*;
 

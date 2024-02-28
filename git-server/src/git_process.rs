@@ -1,5 +1,6 @@
 use log::{debug, error};
-use russh::{server::Handle, ChannelId, CryptoVec};
+use russh::{ChannelId, CryptoVec};
+use ssh_server::wrapper::{HandleWrapper, WrappedHandle};
 use tokio::{io::AsyncReadExt, process::Child};
 
 /// A struct representing a git process.
@@ -7,13 +8,13 @@ use tokio::{io::AsyncReadExt, process::Child};
 /// This struct is used to forward the output of the git process to the client.
 pub(crate) struct GitProcess {
   process: Child,
-  handle: Handle,
+  handle: WrappedHandle,
   channel_id: ChannelId,
 }
 
 impl GitProcess {
   /// Forwards the output of the git process to the client.
-  pub(crate) fn forward_output(process: Child, handle: Handle, channel_id: ChannelId) {
+  pub(crate) fn forward_output(process: Child, handle: WrappedHandle, channel_id: ChannelId) {
     let git_process = GitProcess {
       process,
       handle,

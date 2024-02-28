@@ -1,10 +1,11 @@
 use std::{marker::PhantomData, process::Stdio};
 
 use log::debug;
-use russh::{server::Handle, ChannelId};
+use russh::ChannelId;
 use ssh_server::{
   handler::{Handler, HandlerResult},
   user::User,
+  wrapper::WrappedHandle,
 };
 use tokio::{io::AsyncWrite, process::Command};
 
@@ -39,7 +40,7 @@ impl<R: RepositoryProvider<User = U>, U: User> GitHandler<R, U> {
     command: String,
     repo_path: String,
     user: &U,
-    handle: Handle,
+    handle: WrappedHandle,
     channel_id: ChannelId,
   ) -> Result<std::pin::Pin<Box<dyn AsyncWrite + Send + Sync>>, GitProcessError> {
     let repository = self
@@ -79,13 +80,15 @@ impl<R: RepositoryProvider<User = U>, U: User> GitHandler<R, U> {
 
 impl<R: RepositoryProvider<User = U>, U: User> Handler for GitHandler<R, U> {
   type User = U;
+  type ChannelId = ChannelId;
+  type HandleWrapper = WrappedHandle;
 
   /// Validates the command is one of the valid git commands, then calls the inner `handle_command` method.
   fn handle(
     &self,
     user: &Self::User,
-    handle: Handle,
-    channel_id: ChannelId,
+    handle: Self::HandleWrapper,
+    channel_id: Self::ChannelId,
     command: &str,
   ) -> HandlerResult {
     let (command, repo_path) = match parse_command(command) {
