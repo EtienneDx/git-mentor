@@ -71,3 +71,22 @@ where
     RequestHandler::new(self.authenticator.clone(), self.handlers.clone(), peer_addr)
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use std::time::Duration;
+  use tokio::time::timeout;
+
+  use crate::test_utils::{SimpleAuthenticator, SimpleHandler, SimpleHandlerResult};
+
+  #[tokio::test]
+  async fn test_server() {
+    let authenticator = SimpleAuthenticator;
+    let mut server = SshServer::new(authenticator);
+    server.add_handler(SimpleHandler(SimpleHandlerResult::Accepted));
+    let server = server.listen(2222);
+    let dur = Duration::from_millis(5);
+    assert!(timeout(dur, server).await.is_err());
+  }
+}

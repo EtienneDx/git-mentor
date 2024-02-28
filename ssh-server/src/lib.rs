@@ -6,3 +6,6 @@ mod ssh_server;
 pub mod user;
 
 pub use crate::ssh_server::*;
+
+#[cfg(test)]
+pub(crate) mod test_utils;

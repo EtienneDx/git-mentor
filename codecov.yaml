@@ -1,0 +1,3 @@
+ignore:
+  - "ssh-server/src/server/request_handler.rs"
+  - "ssh-server/src/test*"
