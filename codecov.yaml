@@ -1,0 +1,5 @@
+ignore:
+  - "**/test_*.rs"
+  - "**/test/**/*.rs"
+  - "ssh-server/src/wrapper.rs"
+  - "gmt-api/src/swagger.rs"

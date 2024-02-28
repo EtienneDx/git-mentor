@@ -6,3 +6,6 @@ pub mod repository;
 
 pub use crate::git_handler::*;
 pub use crate::git_handler_config::*;
+
+#[cfg(test)]
+pub(crate) mod test_utils;

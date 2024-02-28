@@ -1,19 +1,28 @@
 use std::sync::Arc;
 
-use russh::server::{Config, Server};
-
-use crate::{
-  authenticator::Authenticator, error::SshError, handler::Handler,
-  server::request_handler::RequestHandler, user::User,
+use russh::{
+  server::{Config, Server},
+  ChannelId,
 };
 
-pub struct SshServer<A, U>
+use crate::{
+  authenticator::Authenticator,
+  error::SshError,
+  handler::Handler,
+  server::request_handler::RequestHandler,
+  user::User,
+  wrapper::{HandleWrapper, WrappedHandle},
+};
+
+pub struct SshServer<A, U, CId, HW>
 where
   A: Authenticator<User = U>,
   U: User,
+  CId: 'static,
+  HW: HandleWrapper<ChannelId = CId> + 'static,
 {
   authenticator: Arc<A>,
-  handlers: Vec<Arc<Box<dyn Handler<User = U>>>>,
+  handlers: Vec<Arc<Box<dyn Handler<ChannelId = CId, HandleWrapper = HW, User = U>>>>,
 }
 
 /// A Git server implementation that uses an authenticator and repository provider.
@@ -21,10 +30,12 @@ where
 /// `A` is the authenticator type that provides user authentication.
 /// `R` is the repository provider type that provides access to Git repositories.
 /// `U` is the user type that is returned by the authenticator and used by the repositories to check permissions.
-impl<A, U> SshServer<A, U>
+impl<A, U, CId, HW> SshServer<A, U, CId, HW>
 where
   A: Authenticator<User = U>,
   U: User,
+  CId: 'static,
+  HW: HandleWrapper<ChannelId = CId> + 'static,
 {
   /// Creates a new `SshServer`, using the given `Authenticator`, `RepositoryProvider` and configuration.
   ///
@@ -40,6 +51,20 @@ where
     }
   }
 
+  /// Adds a handler to the server. Handlers are called in the order they are added, stopping when one of them returns `Accepted` or `Rejected`.
+  pub fn add_handler<H: Handler<ChannelId = CId, HandleWrapper = HW, User = U> + 'static>(
+    &mut self,
+    handler: H,
+  ) {
+    self.handlers.push(Arc::new(Box::new(handler)));
+  }
+}
+
+impl<A, U> SshServer<A, U, ChannelId, WrappedHandle>
+where
+  A: Authenticator<User = U>,
+  U: User,
+{
   /// Starts listening for connections on the given port.
   pub async fn listen(self, port: u16) -> Result<(), SshError> {
     let config = Config {
@@ -53,21 +78,38 @@ where
     println!("Listening on port {}", port);
     res.await.map_err(|e| e.into())
   }
-
-  /// Adds a handler to the server. Handlers are called in the order they are added, stopping when one of them returns `Accepted` or `Rejected`.
-  pub fn add_handler<H: Handler<User = U> + 'static>(&mut self, handler: H) {
-    self.handlers.push(Arc::new(Box::new(handler)));
-  }
 }
 
-impl<A, U> Server for SshServer<A, U>
+impl<A, U> Server for SshServer<A, U, ChannelId, WrappedHandle>
 where
   A: Authenticator<User = U>,
   U: User,
 {
-  type Handler = RequestHandler<A, U>;
+  type Handler = RequestHandler<A, U, ChannelId, WrappedHandle>;
 
   fn new_client(&mut self, peer_addr: Option<std::net::SocketAddr>) -> Self::Handler {
     RequestHandler::new(self.authenticator.clone(), self.handlers.clone(), peer_addr)
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use std::time::Duration;
+  use tokio::time::timeout;
+
+  use crate::test_utils::{SimpleAuthenticator, SimpleHandler, SimpleHandlerResult};
+
+  #[tokio::test]
+  async fn test_server_starts() {
+    let authenticator = SimpleAuthenticator;
+    let mut server = SshServer::new(authenticator);
+    server.add_handler(SimpleHandler::<ChannelId, WrappedHandle>(
+      SimpleHandlerResult::Accepted,
+      std::marker::PhantomData,
+    ));
+    let server = server.listen(2222);
+    let dur = Duration::from_millis(5);
+    assert!(timeout(dur, server).await.is_err());
   }
 }

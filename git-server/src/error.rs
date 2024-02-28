@@ -28,3 +28,32 @@ impl GitProcessError {
     }
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn test_git_process_error_message() {
+    assert_eq!(
+      GitProcessError::InvalidCommandError.message(),
+      "Invalid command"
+    );
+    assert_eq!(
+      GitProcessError::ParseFailureError(ParseError).message(),
+      "Invalid command"
+    );
+    assert_eq!(
+      GitProcessError::RepositoryNotFoundError.message(),
+      "Repository not found"
+    );
+    assert_eq!(
+      GitProcessError::PermissionDeniedError.message(),
+      "Permission denied"
+    );
+    assert_eq!(
+      GitProcessError::IoError(std::io::Error::new(std::io::ErrorKind::Other, "test")).message(),
+      "IO error"
+    );
+  }
+}
