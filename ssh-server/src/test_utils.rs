@@ -37,23 +37,23 @@ impl HandleWrapper for MockHandle {
   ) -> Result<(), russh::CryptoVec> {
     Ok(())
   }
-  async fn close(&self, _id: russh::ChannelId) -> Result<(), ()> {
+  async fn close(&self, _id: Self::ChannelId) -> Result<(), ()> {
     Ok(())
   }
 
   async fn data(
     &self,
-    _id: russh::ChannelId,
+    _id: Self::ChannelId,
     _data: russh::CryptoVec,
   ) -> Result<(), russh::CryptoVec> {
     Ok(())
   }
 
-  async fn eof(&self, _id: russh::ChannelId) -> Result<(), ()> {
+  async fn eof(&self, _id: Self::ChannelId) -> Result<(), ()> {
     Ok(())
   }
 
-  async fn exit_status_request(&self, _id: russh::ChannelId, _exit_status: u32) -> Result<(), ()> {
+  async fn exit_status_request(&self, _id: Self::ChannelId, _exit_status: u32) -> Result<(), ()> {
     Ok(())
   }
 }

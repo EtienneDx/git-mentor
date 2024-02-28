@@ -1,2 +1,3 @@
 ignore:
   - "ssh-server/src/test*"
+  - "ssh-server/src/wrapper.rs"

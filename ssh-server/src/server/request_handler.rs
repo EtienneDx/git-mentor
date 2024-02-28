@@ -205,15 +205,14 @@ mod test {
 
   #[test]
   fn test_skipped_if_no_user() {
-    let handler = RequestHandler {
-      authenticator: Arc::new(SimpleAuthenticator),
-      handlers: vec![Arc::new(Box::new(SimpleHandler::<u32, MockHandle>(
+    let handler = RequestHandler::new(
+      Arc::new(SimpleAuthenticator),
+      vec![Arc::new(Box::new(SimpleHandler::<u32, MockHandle>(
         SimpleHandlerResult::Accepted,
         std::marker::PhantomData,
       )))],
-      user: None,
-      processes: HashMap::new(),
-    };
+      None,
+    );
     let handle = MockHandle;
     let result = handler.handle(handle, 0, "test");
     assert!(
@@ -225,15 +224,14 @@ mod test {
 
   #[test]
   fn test_accept_handle() {
-    let mut handler = RequestHandler {
-      authenticator: Arc::new(SimpleAuthenticator),
-      handlers: vec![Arc::new(Box::new(SimpleHandler::<u32, MockHandle>(
+    let mut handler = RequestHandler::new(
+      Arc::new(SimpleAuthenticator),
+      vec![Arc::new(Box::new(SimpleHandler::<u32, MockHandle>(
         SimpleHandlerResult::Accepted,
         std::marker::PhantomData,
       )))],
-      user: None,
-      processes: HashMap::new(),
-    };
+      None,
+    );
     let handle = MockHandle;
     handler.user = Some(User);
     let result = handler.handle(handle, 0, "test");
@@ -246,15 +244,14 @@ mod test {
 
   #[test]
   fn test_reject_handle() {
-    let mut handler = RequestHandler {
-      authenticator: Arc::new(SimpleAuthenticator),
-      handlers: vec![Arc::new(Box::new(SimpleHandler::<u32, MockHandle>(
+    let mut handler = RequestHandler::new(
+      Arc::new(SimpleAuthenticator),
+      vec![Arc::new(Box::new(SimpleHandler::<u32, MockHandle>(
         SimpleHandlerResult::Rejected,
         std::marker::PhantomData,
       )))],
-      user: None,
-      processes: HashMap::new(),
-    };
+      None,
+    );
     let handle = MockHandle;
     handler.user = Some(User);
     let result = handler.handle(handle, 0, "test");
@@ -267,15 +264,14 @@ mod test {
 
   #[test]
   fn test_skip_handle() {
-    let mut handler = RequestHandler {
-      authenticator: Arc::new(SimpleAuthenticator),
-      handlers: vec![Arc::new(Box::new(SimpleHandler::<u32, MockHandle>(
+    let mut handler = RequestHandler::new(
+      Arc::new(SimpleAuthenticator),
+      vec![Arc::new(Box::new(SimpleHandler::<u32, MockHandle>(
         SimpleHandlerResult::Skipped,
         std::marker::PhantomData,
       )))],
-      user: None,
-      processes: HashMap::new(),
-    };
+      None,
+    );
     let handle = MockHandle;
     handler.user = Some(User);
     let result = handler.handle(handle, 0, "test");

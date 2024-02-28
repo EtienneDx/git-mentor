@@ -12,13 +12,13 @@ pub trait HandleWrapper: Clone {
     data: CryptoVec,
   ) -> Result<(), CryptoVec>;
 
-  async fn close(&self, id: ChannelId) -> Result<(), ()>;
+  async fn close(&self, id: Self::ChannelId) -> Result<(), ()>;
 
-  async fn data(&self, id: ChannelId, data: CryptoVec) -> Result<(), CryptoVec>;
+  async fn data(&self, id: Self::ChannelId, data: CryptoVec) -> Result<(), CryptoVec>;
 
-  async fn eof(&self, id: ChannelId) -> Result<(), ()>;
+  async fn eof(&self, id: Self::ChannelId) -> Result<(), ()>;
 
-  async fn exit_status_request(&self, id: ChannelId, exit_status: u32) -> Result<(), ()>;
+  async fn exit_status_request(&self, id: Self::ChannelId, exit_status: u32) -> Result<(), ()>;
 }
 
 #[derive(Clone)]
@@ -37,19 +37,19 @@ impl HandleWrapper for WrappedHandle {
     self.0.extended_data(id, ext, data).await
   }
 
-  async fn close(&self, id: ChannelId) -> Result<(), ()> {
+  async fn close(&self, id: Self::ChannelId) -> Result<(), ()> {
     self.0.close(id).await
   }
 
-  async fn data(&self, id: ChannelId, data: CryptoVec) -> Result<(), CryptoVec> {
+  async fn data(&self, id: Self::ChannelId, data: CryptoVec) -> Result<(), CryptoVec> {
     self.0.data(id, data).await
   }
 
-  async fn eof(&self, id: ChannelId) -> Result<(), ()> {
+  async fn eof(&self, id: Self::ChannelId) -> Result<(), ()> {
     self.0.eof(id).await
   }
 
-  async fn exit_status_request(&self, id: ChannelId, exit_status: u32) -> Result<(), ()> {
+  async fn exit_status_request(&self, id: Self::ChannelId, exit_status: u32) -> Result<(), ()> {
     self.0.exit_status_request(id, exit_status).await
   }
 }
