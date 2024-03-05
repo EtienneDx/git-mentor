@@ -1,1 +1,5 @@
 tab_spaces = 2
+
+ignore = [
+  "database/src/schema.rs",
+]

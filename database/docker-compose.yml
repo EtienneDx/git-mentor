@@ -1,0 +1,17 @@
+version: '3.9'
+
+services:
+  postgres-test:
+    image: postgres:14-alpine
+    ports:
+      - 5432:5432
+    volumes:
+      - database-volume-test:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_PASSWORD=admin
+      - POSTGRES_USER=admin_user
+      - POSTGRES_DB=mentor_db_test
+
+volumes:
+  database-volume-test:
+    driver: local
