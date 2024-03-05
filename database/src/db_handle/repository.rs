@@ -34,8 +34,25 @@ pub struct NewRepository<'a> {
   pub owner_id: i32,
 }
 
-impl<'a> TransactionHandler<'a> {
-  pub fn create_repository(
+pub trait RepositoryTransactionHandler {
+  fn create_repository(
+    &mut self,
+    name: &str,
+    repo_type: &Repotype,
+    owner_id: i32,
+  ) -> Result<Repository, DatabaseError>;
+
+  fn get_repository_by_name(&mut self, name: &str) -> Result<Option<Repository>, DatabaseError>;
+
+  fn list_user_repositories(&mut self, user_id: i32) -> Result<Vec<Repository>, DatabaseError>;
+
+  fn get_repository_owner(&mut self, repository_id: i32) -> Result<User, DatabaseError>;
+
+  fn delete_repository(&mut self, repository_id: i32) -> bool;
+}
+
+impl<'a> RepositoryTransactionHandler for TransactionHandler<'a> {
+  fn create_repository(
     &mut self,
     name: &str,
     repo_type: &Repotype,
@@ -56,10 +73,7 @@ impl<'a> TransactionHandler<'a> {
       .map_err(DatabaseError::from)
   }
 
-  pub fn get_repository_by_name(
-    &mut self,
-    name: &str,
-  ) -> Result<Option<Repository>, DatabaseError> {
+  fn get_repository_by_name(&mut self, name: &str) -> Result<Option<Repository>, DatabaseError> {
     use crate::schema::repositories::dsl;
 
     let repository = dsl::repositories
@@ -77,7 +91,7 @@ impl<'a> TransactionHandler<'a> {
     }
   }
 
-  pub fn list_user_repositories(&mut self, user_id: i32) -> Result<Vec<Repository>, DatabaseError> {
+  fn list_user_repositories(&mut self, user_id: i32) -> Result<Vec<Repository>, DatabaseError> {
     use crate::schema::repositories::dsl;
 
     dsl::repositories
@@ -87,7 +101,7 @@ impl<'a> TransactionHandler<'a> {
       .map_err(DatabaseError::from)
   }
 
-  pub fn get_repository_owner(&mut self, repository_id: i32) -> Result<User, DatabaseError> {
+  fn get_repository_owner(&mut self, repository_id: i32) -> Result<User, DatabaseError> {
     use crate::schema::repositories::dsl;
     use crate::schema::users;
 
@@ -99,7 +113,7 @@ impl<'a> TransactionHandler<'a> {
       .map_err(DatabaseError::from)
   }
 
-  pub fn delete_repository(&mut self, repository_id: i32) -> bool {
+  fn delete_repository(&mut self, repository_id: i32) -> bool {
     use crate::schema::repositories::dsl::repositories;
 
     diesel::delete(repositories.find(repository_id))
@@ -110,12 +124,14 @@ impl<'a> TransactionHandler<'a> {
 
 #[cfg(test)]
 mod tests {
-  use super::Repotype;
-
   use rstest::rstest;
 
   use crate::{
-    db_handle::tests::{db_handle, DbHandleGuard, TestError},
+    db_handle::{
+      repository::{RepositoryTransactionHandler, Repotype},
+      tests::{db_handle, DbHandleGuard, TestError},
+      user::UserTransactionHandler,
+    },
     error::DatabaseError,
     transaction_tests,
   };

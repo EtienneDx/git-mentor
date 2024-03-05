@@ -26,8 +26,28 @@ pub struct NewUser<'a> {
   pub pubkey: &'a Vec<Option<String>>,
 }
 
-impl<'a> TransactionHandler<'a> {
-  pub fn create_user(
+pub trait UserTransactionHandler {
+  fn create_user(
+    &mut self,
+    username: &str,
+    email: &str,
+    password: &str,
+    pubkey: Option<Vec<&str>>,
+  ) -> Result<User, DatabaseError>;
+
+  fn get_user_by_id(&mut self, user_id: i32) -> Result<Option<User>, DatabaseError>;
+
+  fn get_user_by_username(&mut self, username: &str) -> Result<Option<User>, DatabaseError>;
+
+  fn get_user_by_email(&mut self, email: &str) -> Result<Option<User>, DatabaseError>;
+
+  fn insert_user_public_key(&mut self, user_id: i32, pubkey: &str) -> Result<(), DatabaseError>;
+
+  fn delete_user(&mut self, user_id: i32) -> Result<(), DatabaseError>;
+}
+
+impl<'a> UserTransactionHandler for TransactionHandler<'a> {
+  fn create_user(
     &mut self,
     username: &str,
     email: &str,
@@ -54,7 +74,7 @@ impl<'a> TransactionHandler<'a> {
       .map_err(DatabaseError::from)
   }
 
-  pub fn get_user_by_id(&mut self, user_id: i32) -> Result<Option<User>, DatabaseError> {
+  fn get_user_by_id(&mut self, user_id: i32) -> Result<Option<User>, DatabaseError> {
     use crate::schema::users::dsl;
 
     let user = dsl::users
@@ -72,7 +92,7 @@ impl<'a> TransactionHandler<'a> {
     }
   }
 
-  pub fn get_user_by_username(&mut self, username: &str) -> Result<Option<User>, DatabaseError> {
+  fn get_user_by_username(&mut self, username: &str) -> Result<Option<User>, DatabaseError> {
     use crate::schema::users::dsl;
 
     let user = dsl::users
@@ -90,7 +110,7 @@ impl<'a> TransactionHandler<'a> {
     }
   }
 
-  pub fn get_user_by_email(&mut self, email: &str) -> Result<Option<User>, DatabaseError> {
+  fn get_user_by_email(&mut self, email: &str) -> Result<Option<User>, DatabaseError> {
     use crate::schema::users::dsl;
 
     let user = dsl::users
@@ -108,11 +128,7 @@ impl<'a> TransactionHandler<'a> {
     }
   }
 
-  pub fn insert_user_public_key(
-    &mut self,
-    user_id: i32,
-    pubkey: &str,
-  ) -> Result<(), DatabaseError> {
+  fn insert_user_public_key(&mut self, user_id: i32, pubkey: &str) -> Result<(), DatabaseError> {
     diesel::sql_query(format!(
       "UPDATE users SET pubkey = array_append(pubkey, '{}') WHERE id = {}",
       pubkey, user_id
@@ -122,7 +138,7 @@ impl<'a> TransactionHandler<'a> {
     .map_err(DatabaseError::from)
   }
 
-  pub fn delete_user(&mut self, user_id: i32) -> Result<(), DatabaseError> {
+  fn delete_user(&mut self, user_id: i32) -> Result<(), DatabaseError> {
     use crate::schema::users::dsl::users;
 
     diesel::delete(users.find(user_id))
@@ -138,8 +154,9 @@ mod tests {
 
   use crate::{
     db_handle::{
-      repository::Repotype,
+      repository::{RepositoryTransactionHandler, Repotype},
       tests::{db_handle, DbHandleGuard, TestError},
+      user::UserTransactionHandler,
     },
     error::DatabaseError,
     transaction_tests,
