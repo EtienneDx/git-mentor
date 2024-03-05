@@ -11,40 +11,6 @@ pub mod db_handle;
 pub use db_handle::DbHandle;
 pub use db_handle::TransactionHandler;
 
-impl Group {
-  pub fn create(conn: &mut PgConnection, teacher_id: i32) -> Group {
-    use crate::schema::groups;
-
-    let new_group = NewGroup { teacher_id };
-
-    diesel::insert_into(groups::table)
-      .values(&new_group)
-      .returning(Group::as_returning())
-      .get_result(conn)
-      .expect("Error saving new group")
-  }
-
-  pub fn get_with_id(conn: &mut PgConnection, group_id: i32) -> Option<Group> {
-    use crate::schema::groups::dsl;
-
-    let group = dsl::groups
-      .filter(dsl::id.eq(group_id))
-      .select(Group::as_select())
-      .first(conn)
-      .optional();
-    match group {
-      Ok(group) => group,
-      Err(_) => None,
-    }
-  }
-
-  pub fn delete(conn: &mut PgConnection, group_id: i32) -> bool {
-    use crate::schema::groups::dsl::groups;
-
-    diesel::delete(groups.find(group_id)).execute(conn).is_ok()
-  }
-}
-
 impl Assignment {
   pub fn create(
     conn: &mut PgConnection,
@@ -87,50 +53,6 @@ impl Assignment {
     use crate::schema::assignments::dsl::assignments;
 
     diesel::delete(assignments.find(assignment_id))
-      .execute(conn)
-      .is_ok()
-  }
-}
-
-impl GroupStudent {
-  pub fn create(conn: &mut PgConnection, group_id: i32, student_id: i32) -> GroupStudent {
-    use crate::schema::group_students;
-
-    let new_group_student = NewGroupStudent {
-      group_id,
-      student_id,
-    };
-
-    diesel::insert_into(group_students::table)
-      .values(&new_group_student)
-      .returning(GroupStudent::as_returning())
-      .get_result(conn)
-      .expect("Error saving new group_student")
-  }
-
-  pub fn get_with_ids(
-    conn: &mut PgConnection,
-    group_id: i32,
-    student_id: i32,
-  ) -> Option<GroupStudent> {
-    use crate::schema::group_students::dsl;
-
-    let group_student = dsl::group_students
-      .filter(dsl::group_id.eq(group_id))
-      .filter(dsl::student_id.eq(student_id))
-      .select(GroupStudent::as_select())
-      .first(conn)
-      .optional();
-    match group_student {
-      Ok(group_student) => group_student,
-      Err(_) => None,
-    }
-  }
-
-  pub fn delete(conn: &mut PgConnection, group_id: i32, student_id: i32) -> bool {
-    use crate::schema::group_students::dsl::group_students;
-
-    diesel::delete(group_students.find((group_id, student_id)))
       .execute(conn)
       .is_ok()
   }

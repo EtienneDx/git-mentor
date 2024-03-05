@@ -11,4 +11,6 @@ pub enum DatabaseError {
   DieselError(#[from] diesel::result::Error),
   #[error("Migration error")]
   MigrationError,
+  #[error("Not found")]
+  NotFound,
 }

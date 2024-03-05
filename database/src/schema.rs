@@ -23,8 +23,8 @@ diesel::table! {
         id -> Int4,
         group_id -> Int4,
         base_repo_id -> Int4,
-        test_repo_id -> Int4,
-        correction_repo_id -> Int4,
+        test_repo_id -> Nullable<Int4>,
+        correction_repo_id -> Nullable<Int4>,
     }
 }
 
@@ -53,7 +53,7 @@ diesel::table! {
         comment_type -> Commenttype,
         message -> Text,
         author_type -> Commentauthor,
-        author_id -> Int4,
+        author_id -> Nullable<Int4>,
         date -> Timestamp,
     }
 }
@@ -68,7 +68,8 @@ diesel::table! {
 diesel::table! {
     groups (id) {
         id -> Int4,
-        teacher_id -> Int4,
+        name -> Text,
+        teacher_id -> Nullable<Int4>,
     }
 }
 
@@ -82,6 +83,7 @@ diesel::table! {
         name -> Varchar,
         repo_type -> Repotype,
         owner_id -> Int4,
+        assignment_id -> Nullable<Int4>,
     }
 }
 

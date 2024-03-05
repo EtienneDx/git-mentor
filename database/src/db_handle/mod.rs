@@ -6,6 +6,7 @@ use crate::error::DatabaseError;
 #[cfg(test)]
 pub mod tests;
 
+pub mod group;
 pub mod repository;
 pub mod user;
 

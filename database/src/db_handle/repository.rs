@@ -23,6 +23,7 @@ pub struct Repository {
   pub name: String,
   pub repo_type: Repotype,
   pub owner_id: i32,
+  pub assignment_id: Option<i32>,
 }
 
 #[derive(Insertable)]
@@ -32,6 +33,7 @@ pub struct NewRepository<'a> {
   pub name: &'a str,
   pub repo_type: &'a Repotype,
   pub owner_id: i32,
+  pub assignment_id: Option<i32>,
 }
 
 pub trait RepositoryTransactionHandler {
@@ -40,6 +42,7 @@ pub trait RepositoryTransactionHandler {
     name: &str,
     repo_type: &Repotype,
     owner_id: i32,
+    assignment_id: Option<i32>,
   ) -> Result<Repository, DatabaseError>;
 
   fn get_repository_by_name(&mut self, name: &str) -> Result<Option<Repository>, DatabaseError>;
@@ -57,6 +60,7 @@ impl<'a> RepositoryTransactionHandler for TransactionHandler<'a> {
     name: &str,
     repo_type: &Repotype,
     owner_id: i32,
+    assignment_id: Option<i32>,
   ) -> Result<Repository, DatabaseError> {
     use crate::schema::repositories;
 
@@ -64,6 +68,7 @@ impl<'a> RepositoryTransactionHandler for TransactionHandler<'a> {
       name,
       repo_type,
       owner_id,
+      assignment_id,
     };
 
     diesel::insert_into(repositories::table)
@@ -124,12 +129,9 @@ impl<'a> RepositoryTransactionHandler for TransactionHandler<'a> {
 
 #[cfg(test)]
 mod tests {
-  use rstest::rstest;
-
   use crate::{
     db_handle::{
       repository::{RepositoryTransactionHandler, Repotype},
-      tests::{db_handle, DbHandleGuard, TestError},
       user::UserTransactionHandler,
     },
     error::DatabaseError,
@@ -140,7 +142,7 @@ mod tests {
     fn create_repository_unknown_user_fails(tx: &mut TransactionHandler) {
       let name = "test-repo";
       let repo_type = Repotype::Default;
-      let repository = tx.create_repository(name, &repo_type, 1);
+      let repository = tx.create_repository(name, &repo_type, 1, None);
 
       let err = repository.expect_err("Expected error");
       assert!(matches!(err, DatabaseError::DieselError(_)), "Expected diesel error, got: {:?}", err);
@@ -151,7 +153,7 @@ mod tests {
       let repo_type = Repotype::Default;
       let user = tx.create_user("test_create_repository", "abc", "abc", None)?;
 
-      let repository = tx.create_repository(name, &repo_type, user.id)?;
+      let repository = tx.create_repository(name, &repo_type, user.id, None)?;
       assert_eq!(repository.name, name);
       assert_eq!(repository.repo_type, repo_type);
       assert_eq!(repository.owner_id, user.id);
@@ -169,7 +171,7 @@ mod tests {
       let repo_type = Repotype::Default;
 
       let user = tx.create_user("test_get_repository_by_name", "abc", "abc", None)?;
-      tx.create_repository(name, &repo_type, user.id)?;
+      tx.create_repository(name, &repo_type, user.id, None)?;
 
       let repository = tx.get_repository_by_name(name)?.expect("Repository not found");
       assert_eq!(repository.name, name);
@@ -186,7 +188,7 @@ mod tests {
 
       let user = tx.create_user("test_list_user_repositories", "abc", "abc", None)?;
       repos.iter().for_each(|(name, repo_type)| {
-        tx.create_repository(name, repo_type, user.id).expect("Error creating repository");
+        tx.create_repository(name, repo_type, user.id, None).expect("Error creating repository");
       });
 
       let repositories = tx.list_user_repositories(user.id)?;
@@ -201,7 +203,7 @@ mod tests {
 
     fn get_repository_owner(tx: &mut TransactionHandler) {
       let user = tx.create_user("test_get_repository_owner", "abc", "abc", None)?;
-      let repository = tx.create_repository("test-repo", &Repotype::Default, user.id)?;
+      let repository = tx.create_repository("test-repo", &Repotype::Default, user.id, None)?;
 
       let owner = tx.get_repository_owner(repository.id)?;
       assert_eq!(owner.id, user.id);
@@ -209,7 +211,7 @@ mod tests {
 
     fn delete_repository(tx: &mut TransactionHandler) {
       let user = tx.create_user("test_delete_repository", "abc", "abc", None)?;
-      let repository = tx.create_repository("test-repo", &Repotype::Default, user.id)?;
+      let repository = tx.create_repository("test-repo", &Repotype::Default, user.id, None)?;
 
       let result = tx.delete_repository(repository.id);
       assert!(result);

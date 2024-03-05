@@ -6,45 +6,14 @@ use diesel::serialize::{self, IsNull, Output, ToSql};
 use std::io::Write;
 
 #[derive(Queryable, Selectable)]
-#[diesel(table_name = crate::schema::groups)]
-#[diesel(check_for_backend(diesel::pg::Pg))]
-pub struct Group {
-  pub id: i32,
-  pub teacher_id: i32,
-}
-
-#[derive(Insertable)]
-#[diesel(table_name = crate::schema::groups)]
-#[diesel(check_for_backend(diesel::pg::Pg))]
-pub struct NewGroup {
-  pub teacher_id: i32,
-}
-
-#[derive(Queryable, Selectable)]
-#[diesel(table_name = crate::schema::group_students)]
-#[diesel(check_for_backend(diesel::pg::Pg))]
-pub struct GroupStudent {
-  pub group_id: i32,
-  pub student_id: i32,
-}
-
-#[derive(Insertable)]
-#[diesel(table_name = crate::schema::group_students)]
-#[diesel(check_for_backend(diesel::pg::Pg))]
-pub struct NewGroupStudent {
-  pub group_id: i32,
-  pub student_id: i32,
-}
-
-#[derive(Queryable, Selectable)]
 #[diesel(table_name = crate::schema::assignments)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Assignment {
   pub id: i32,
   pub group_id: i32,
   pub base_repo_id: i32,
-  pub test_repo_id: i32,
-  pub correction_repo_id: i32,
+  pub test_repo_id: Option<i32>,
+  pub correction_repo_id: Option<i32>,
 }
 
 #[derive(Insertable)]
@@ -82,7 +51,7 @@ pub struct Comment {
   pub comment_type: Commenttype,
   pub message: String,
   pub author_type: Commentauthor,
-  pub author_id: i32,
+  pub author_id: Option<i32>,
   pub date: std::time::SystemTime,
 }
 

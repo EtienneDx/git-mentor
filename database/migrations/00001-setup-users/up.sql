@@ -8,11 +8,12 @@ CREATE TABLE users (
 
 CREATE TABLE groups (
   id SERIAL PRIMARY KEY,
-  teacher_id SERIAL REFERENCES users(id)
+  name TEXT NOT NULL UNIQUE,
+  teacher_id INTEGER REFERENCES users(id) ON DELETE SET NULL
 );
 
 CREATE TABLE group_students (
-  group_id SERIAL REFERENCES groups(id),
-  student_id SERIAL REFERENCES users(id),
+  group_id INTEGER NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+  student_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   PRIMARY KEY (group_id, student_id)
 );

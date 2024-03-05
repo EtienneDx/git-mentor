@@ -35,8 +35,9 @@ pub enum TestError {
 #[macro_export]
 macro_rules! transaction_tests {
   {$(fn $name:ident($tx:ident : &mut TransactionHandler) { $($body:tt)* })*} => {
+    use crate::db_handle::tests::{DbHandleGuard, TestError, db_handle};
     $(
-      #[rstest]
+      #[rstest::rstest]
       fn $name(mut db_handle: DbHandleGuard) {
         let err: Result<(), TestError> = db_handle.transaction(|$tx| {
           $($body)*

@@ -5,6 +5,8 @@ use diesel::{
 
 use crate::{error::DatabaseError, TransactionHandler};
 
+use super::group::Group;
+
 #[derive(Queryable, Selectable)]
 #[diesel(table_name = crate::schema::users)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
@@ -44,6 +46,10 @@ pub trait UserTransactionHandler {
   fn insert_user_public_key(&mut self, user_id: i32, pubkey: &str) -> Result<(), DatabaseError>;
 
   fn delete_user(&mut self, user_id: i32) -> Result<(), DatabaseError>;
+
+  fn list_teaching_groups(&mut self, user_id: i32) -> Result<Vec<Group>, DatabaseError>;
+
+  fn list_belongs_groups(&mut self, user_id: i32) -> Result<Vec<Group>, DatabaseError>;
 }
 
 impl<'a> UserTransactionHandler for TransactionHandler<'a> {
@@ -146,16 +152,35 @@ impl<'a> UserTransactionHandler for TransactionHandler<'a> {
       .map(|_| ())
       .map_err(DatabaseError::from)
   }
+
+  fn list_teaching_groups(&mut self, user_id: i32) -> Result<Vec<Group>, DatabaseError> {
+    use crate::schema::groups::dsl;
+
+    dsl::groups
+      .filter(dsl::teacher_id.eq(user_id))
+      .select(Group::as_select())
+      .load(self.conn)
+      .map_err(DatabaseError::from)
+  }
+
+  fn list_belongs_groups(&mut self, user_id: i32) -> Result<Vec<Group>, DatabaseError> {
+    use crate::schema::group_students::dsl;
+
+    dsl::group_students
+      .filter(dsl::student_id.eq(user_id))
+      .inner_join(crate::schema::groups::table)
+      .select(Group::as_select())
+      .load(self.conn)
+      .map_err(DatabaseError::from)
+  }
 }
 
 #[cfg(test)]
 mod tests {
-  use rstest::rstest;
-
   use crate::{
     db_handle::{
+      group::GroupTransactionHandler,
       repository::{RepositoryTransactionHandler, Repotype},
-      tests::{db_handle, DbHandleGuard, TestError},
       user::UserTransactionHandler,
     },
     error::DatabaseError,
@@ -278,10 +303,64 @@ mod tests {
       let password = "abc";
 
       let user = tx.create_user(username, email, password, None)?;
-      tx.create_repository("test-repo", &Repotype::Default, user.id)?;
+      tx.create_repository("test-repo", &Repotype::Default, user.id, None)?;
 
       let err = tx.delete_user(user.id).expect_err("Expected error");
       assert!(matches!(err, DatabaseError::DieselError(_)), "Expected diesel error, got: {:?}", err);
+    }
+
+    fn list_teaching_groups_none(tx: &mut TransactionHandler) {
+      let username = "list_teaching_groups";
+      let email = "abc";
+      let password = "abc";
+
+      let user = tx.create_user(username, email, password, None)?;
+      let groups = tx.list_teaching_groups(user.id)?;
+
+      assert!(groups.is_empty());
+    }
+
+    fn list_teaching_groups_one(tx: &mut TransactionHandler) {
+      let username = "list_teaching_groups";
+      let email = "abc";
+      let password = "abc";
+
+      let user = tx.create_user(username, email, password, None)?;
+      tx.create_group("test_group", Some(user.id))?;
+      let groups = tx.list_teaching_groups(user.id)?;
+
+      assert_eq!(groups.len(), 1);
+    }
+
+    fn list_belongs_groups_none(tx: &mut TransactionHandler) {
+      let username = "list_belongs_groups";
+      let email = "abc";
+      let password = "abc";
+
+      let user = tx.create_user(username, email, password, None)?;
+      let groups = tx.list_belongs_groups(user.id)?;
+
+      assert!(groups.is_empty());
+    }
+
+    fn list_belongs_groups(tx: &mut TransactionHandler) {
+      let username = "list_belongs_groups";
+      let email = "abc";
+      let password = "abc";
+
+      let user = tx.create_user(username, email, password, None)?;
+      let groups = vec![
+        ("test_group_1", None),
+        ("test_group_2", None),
+        ("test_group_3", None),
+      ];
+      groups.iter().for_each(|(name, teacher_id)| {
+        let group = tx.create_group(name, teacher_id.clone()).expect("Error creating group");
+        tx.add_student(group.id, user.id).expect("Error adding student");
+      });
+      let groups = tx.list_belongs_groups(user.id)?;
+
+      assert_eq!(groups.len(), 3);
     }
   }
 }
