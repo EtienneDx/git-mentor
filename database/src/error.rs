@@ -1,7 +1,7 @@
 use diesel::ConnectionError;
 use thiserror::Error;
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, PartialEq)]
 pub enum DatabaseError {
   #[error("Connection error: {0}")]
   ConnectionError(#[from] ConnectionError),

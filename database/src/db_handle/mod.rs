@@ -3,6 +3,10 @@ use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 
 use crate::error::DatabaseError;
 
+#[cfg(test)]
+pub mod tests;
+
+pub mod repository;
 pub mod user;
 
 pub struct DbHandle {
@@ -42,31 +46,4 @@ impl DbHandle {
 
 pub struct TransactionHandler<'a> {
   conn: &'a mut PgConnection,
-}
-
-#[cfg(test)]
-pub mod tests {
-  use std::sync::{Mutex, MutexGuard};
-
-  use crate::DbHandle;
-
-  #[rstest::fixture]
-  #[once]
-  fn db_handle_mux() -> Mutex<DbHandle> {
-    dotenv::dotenv().ok();
-
-    let database_url = std::env::var("DATABASE_URL").unwrap();
-    let mut handle = DbHandle::new(database_url).unwrap();
-
-    handle.run_migrations().expect("Error running migrations");
-
-    Mutex::new(handle)
-  }
-
-  pub type DbHandleGuard<'a> = MutexGuard<'a, DbHandle>;
-
-  #[rstest::fixture]
-  pub fn db_handle<'a>(db_handle_mux: &'a Mutex<DbHandle>) -> DbHandleGuard<'a> {
-    db_handle_mux.lock().unwrap()
-  }
 }

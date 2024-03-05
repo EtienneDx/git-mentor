@@ -11,51 +11,6 @@ pub mod db_handle;
 pub use db_handle::DbHandle;
 pub use db_handle::TransactionHandler;
 
-impl Repository {
-  pub fn create(
-    conn: &mut PgConnection,
-    name: &str,
-    repo_type: &Repotype,
-    owner_id: i32,
-  ) -> Repository {
-    use crate::schema::repositories;
-
-    let new_repository = NewRepository {
-      name,
-      repo_type,
-      owner_id,
-    };
-
-    diesel::insert_into(repositories::table)
-      .values(&new_repository)
-      .returning(Repository::as_returning())
-      .get_result(conn)
-      .expect("Error saving new repository")
-  }
-
-  pub fn get_with_name(conn: &mut PgConnection, name: &str) -> Option<Repository> {
-    use crate::schema::repositories::dsl;
-
-    let repository = dsl::repositories
-      .filter(dsl::name.eq(name))
-      .select(Repository::as_select())
-      .first(conn)
-      .optional();
-    match repository {
-      Ok(repository) => repository,
-      Err(_) => None,
-    }
-  }
-
-  pub fn delete(conn: &mut PgConnection, repository_id: i32) -> bool {
-    use crate::schema::repositories::dsl::repositories;
-
-    diesel::delete(repositories.find(repository_id))
-      .execute(conn)
-      .is_ok()
-  }
-}
-
 impl Group {
   pub fn create(conn: &mut PgConnection, teacher_id: i32) -> Group {
     use crate::schema::groups;

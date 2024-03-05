@@ -1,6 +1,30 @@
-use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl, SelectableHelper};
+use diesel::{
+  deserialize::Queryable, prelude::Insertable, ExpressionMethods, OptionalExtension, QueryDsl,
+  RunQueryDsl, Selectable, SelectableHelper,
+};
 
-use crate::{error::DatabaseError, NewUser, TransactionHandler, User};
+use crate::{error::DatabaseError, TransactionHandler};
+
+#[derive(Queryable, Selectable)]
+#[diesel(table_name = crate::schema::users)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct User {
+  pub id: i32,
+  pub username: String,
+  pub email: String,
+  pub password: String,
+  pub pubkey: Vec<Option<String>>,
+}
+
+#[derive(Insertable)]
+#[diesel(table_name = crate::schema::users)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct NewUser<'a> {
+  pub username: &'a str,
+  pub email: &'a str,
+  pub password: &'a str,
+  pub pubkey: &'a Vec<Option<String>>,
+}
 
 impl<'a> TransactionHandler<'a> {
   pub fn create_user(
@@ -98,12 +122,13 @@ impl<'a> TransactionHandler<'a> {
     .map_err(DatabaseError::from)
   }
 
-  pub fn delete_user(&mut self, user_id: i32) -> bool {
+  pub fn delete_user(&mut self, user_id: i32) -> Result<(), DatabaseError> {
     use crate::schema::users::dsl::users;
 
     diesel::delete(users.find(user_id))
       .execute(self.conn)
-      .is_ok()
+      .map(|_| ())
+      .map_err(DatabaseError::from)
   }
 }
 
@@ -111,144 +136,99 @@ impl<'a> TransactionHandler<'a> {
 mod tests {
   use rstest::rstest;
 
-  use crate::db_handle::tests::{db_handle, DbHandleGuard};
+  use crate::{
+    db_handle::{
+      repository::Repotype,
+      tests::{db_handle, DbHandleGuard, TestError},
+    },
+    error::DatabaseError,
+    transaction_tests,
+  };
 
-  #[derive(thiserror::Error, Debug, PartialEq)]
-  enum TestError {
-    #[error("Expected")]
-    Expected,
-    #[error("Unexpected error: {0}")]
-    Unexpected(#[from] diesel::result::Error),
-  }
-
-  #[rstest]
-  fn test_create_user(mut db_handle: DbHandleGuard) {
-    let username = "test_create_user";
-    let email = "abc";
-    let password = "abc";
-
-    let err: Result<(), TestError> = db_handle.transaction(|tx| {
-      let user = tx.create_user(username, email, password, None).unwrap();
+  transaction_tests! {
+    fn create_user(tx: &mut TransactionHandler) {
+      let username = "create_user";
+      let email = "abc";
+      let password = "abc";
+      let user = tx.create_user(username, email, password, None)?;
 
       assert_eq!(user.username, username);
       assert_eq!(user.email, email);
       assert_eq!(user.password, password);
       assert_eq!(user.pubkey, vec![]);
-      Err(TestError::Expected)
-    });
+    }
 
-    assert!(err.is_err());
-    let err = err.unwrap_err();
-    assert!(matches!(err, TestError::Expected), "{:?}", err);
-  }
-
-  #[rstest]
-  fn test_get_user_by_id(mut db_handle: DbHandleGuard) {
-    let username = "test_get_user_by_id";
-    let email = "abc";
-    let password = "abc";
-
-    let err: Result<(), TestError> = db_handle.transaction(|tx| {
-      let user = tx.create_user(username, email, password, None).unwrap();
-      let user = tx.get_user_by_id(user.id).unwrap().unwrap();
+    fn get_user_by_id(tx: &mut TransactionHandler) {
+      let username = "get_user_by_id";
+      let email = "abc";
+      let password = "abc";
+      let user = tx.create_user(username, email, password, None)?;
+      let user = tx.get_user_by_id(user.id)?.expect("User not found");
 
       assert_eq!(user.username, username);
       assert_eq!(user.email, email);
       assert_eq!(user.password, password);
       assert_eq!(user.pubkey, vec![]);
-      Err(TestError::Expected)
-    });
+    }
 
-    assert!(err.is_err());
-    let err = err.unwrap_err();
-    assert!(matches!(err, TestError::Expected), "{:?}", err);
-  }
+    fn get_user_by_username(tx: &mut TransactionHandler) {
+      let username = "get_user_by_username";
+      let email = "abc";
+      let password = "abc";
 
-  #[rstest]
-  fn test_get_user_by_username(mut db_handle: DbHandleGuard) {
-    let username = "test_get_user_by_username";
-    let email = "abc";
-    let password = "abc";
-
-    let err: Result<(), TestError> = db_handle.transaction(|tx| {
-      tx.create_user(username, email, password, None).unwrap();
-      let user = tx.get_user_by_username(username).unwrap().unwrap();
+      tx.create_user(username, email, password, None)?;
+      let user = tx.get_user_by_username(username)?.expect("User not found");
 
       assert_eq!(user.username, username);
       assert_eq!(user.email, email);
       assert_eq!(user.password, password);
       assert_eq!(user.pubkey, vec![]);
-      Err(TestError::Expected)
-    });
+    }
 
-    assert!(err.is_err());
-    let err = err.unwrap_err();
-    assert!(matches!(err, TestError::Expected), "{:?}", err);
-  }
+    fn get_user_by_email(tx: &mut TransactionHandler) {
+      let username = "get_user_by_email";
+      let email = "abc";
+      let password = "abc";
 
-  #[rstest]
-  fn test_get_user_by_email(mut db_handle: DbHandleGuard) {
-    let username = "test_get_user_by_email";
-    let email = "abc";
-    let password = "abc";
-
-    let err: Result<(), TestError> = db_handle.transaction(|tx| {
-      tx.create_user(username, email, password, None).unwrap();
-      let user = tx.get_user_by_email(email).unwrap().unwrap();
+      tx.create_user(username, email, password, None)?;
+      let user = tx.get_user_by_email(email)?.expect("User not found");
 
       assert_eq!(user.username, username);
       assert_eq!(user.email, email);
       assert_eq!(user.password, password);
       assert_eq!(user.pubkey, vec![]);
-      Err(TestError::Expected)
-    });
+    }
 
-    assert!(err.is_err());
-    let err = err.unwrap_err();
-    assert!(matches!(err, TestError::Expected), "{:?}", err);
-  }
+    fn insert_user_public_key_without_existing(tx: &mut TransactionHandler) {
+      let username = "insert_user_public_key";
+      let email = "abc";
+      let password = "abc";
+      let pubkey = "pubkey";
 
-  #[rstest]
-  fn test_insert_user_public_key_without_existing(mut db_handle: DbHandleGuard) {
-    let username = "test_insert_user_public_key";
-    let email = "abc";
-    let password = "abc";
-    let pubkey = "pubkey";
+      let user = tx.create_user(username, email, password, None)?;
+      tx.insert_user_public_key(user.id, pubkey)?;
 
-    let err: Result<(), TestError> = db_handle.transaction(|tx| {
-      let user = tx.create_user(username, email, password, None).unwrap();
-      tx.insert_user_public_key(user.id, pubkey).unwrap();
-
-      let user = tx.get_user_by_id(user.id).unwrap().unwrap();
+      let user = tx.get_user_by_id(user.id)?.expect("User not found");
       assert!(
         user.pubkey.contains(&Some(pubkey.to_string())),
         "Expected {:?} to contain '{}'",
         user.pubkey,
         pubkey
       );
-      Err(TestError::Expected)
-    });
+    }
 
-    assert!(err.is_err());
-    let err = err.unwrap_err();
-    assert!(matches!(err, TestError::Expected), "{:?}", err);
-  }
+    fn insert_user_public_key_with_existing(tx: &mut TransactionHandler) {
+      let username = "insert_user_public_key";
+      let email = "abc";
+      let password = "abc";
+      let basepubkey = "pubkey";
+      let extrapubkey = "extrapubkey";
 
-  #[rstest]
-  fn test_insert_user_public_key_with_existing(mut db_handle: DbHandleGuard) {
-    let username = "test_insert_user_public_key";
-    let email = "abc";
-    let password = "abc";
-    let basepubkey = "pubkey";
-    let extrapubkey = "extrapubkey";
-
-    let err: Result<(), TestError> = db_handle.transaction(|tx| {
       let user = tx
-        .create_user(username, email, password, Some(vec![basepubkey]))
-        .unwrap();
-      tx.insert_user_public_key(user.id, extrapubkey).unwrap();
+        .create_user(username, email, password, Some(vec![basepubkey]))?;
+      tx.insert_user_public_key(user.id, extrapubkey)?;
 
-      let user = tx.get_user_by_id(user.id).unwrap().unwrap();
+      let user = tx.get_user_by_id(user.id)?.expect("User not found");
       assert!(
         user.pubkey.contains(&Some(basepubkey.to_string())),
         "Expected {:?} to contain '{}'",
@@ -261,31 +241,30 @@ mod tests {
         user.pubkey,
         extrapubkey
       );
-      Err(TestError::Expected)
-    });
+    }
 
-    assert!(err.is_err());
-    let err = err.unwrap_err();
-    assert!(matches!(err, TestError::Expected), "{:?}", err);
-  }
+    fn delete_user(tx: &mut TransactionHandler) {
+      let username = "delete_user";
+      let email = "abc";
+      let password = "abc";
 
-  #[rstest]
-  fn test_delete_user(mut db_handle: DbHandleGuard) {
-    let username = "test_delete_user";
-    let email = "abc";
-    let password = "abc";
+      let user = tx.create_user(username, email, password, None)?;
+      tx.delete_user(user.id).expect("Error deleting user");
 
-    let err: Result<(), TestError> = db_handle.transaction(|tx| {
-      let user = tx.create_user(username, email, password, None).unwrap();
-      assert!(tx.delete_user(user.id));
-
-      let user = tx.get_user_by_id(user.id).unwrap();
+      let user = tx.get_user_by_id(user.id)?;
       assert!(user.is_none());
-      Err(TestError::Expected)
-    });
+    }
 
-    assert!(err.is_err());
-    let err = err.unwrap_err();
-    assert!(matches!(err, TestError::Expected), "{:?}", err);
+    fn delete_user_with_repo_fails(tx: &mut TransactionHandler) {
+      let username = "delete_user_with_repo_fails";
+      let email = "abc";
+      let password = "abc";
+
+      let user = tx.create_user(username, email, password, None)?;
+      tx.create_repository("test-repo", &Repotype::Default, user.id)?;
+
+      let err = tx.delete_user(user.id).expect_err("Expected error");
+      assert!(matches!(err, DatabaseError::DieselError(_)), "Expected diesel error, got: {:?}", err);
+    }
   }
 }

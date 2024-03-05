@@ -6,53 +6,6 @@ use diesel::serialize::{self, IsNull, Output, ToSql};
 use std::io::Write;
 
 #[derive(Queryable, Selectable)]
-#[diesel(table_name = crate::schema::users)]
-#[diesel(check_for_backend(diesel::pg::Pg))]
-pub struct User {
-  pub id: i32,
-  pub username: String,
-  pub email: String,
-  pub password: String,
-  pub pubkey: Vec<Option<String>>,
-}
-
-#[derive(Insertable)]
-#[diesel(table_name = crate::schema::users)]
-#[diesel(check_for_backend(diesel::pg::Pg))]
-pub struct NewUser<'a> {
-  pub username: &'a str,
-  pub email: &'a str,
-  pub password: &'a str,
-  pub pubkey: &'a Vec<Option<String>>,
-}
-
-#[derive(Debug, diesel_derive_enum::DbEnum)]
-#[ExistingTypePath = "crate::schema::sql_types::Repotype"]
-pub enum Repotype {
-  Default,
-  Ci,
-}
-
-#[derive(Queryable, Selectable)]
-#[diesel(table_name = crate::schema::repositories)]
-#[diesel(check_for_backend(diesel::pg::Pg))]
-pub struct Repository {
-  pub id: i32,
-  pub name: String,
-  pub repo_type: Repotype,
-  pub owner_id: i32,
-}
-
-#[derive(Insertable)]
-#[diesel(table_name = crate::schema::repositories)]
-#[diesel(check_for_backend(diesel::pg::Pg))]
-pub struct NewRepository<'a> {
-  pub name: &'a str,
-  pub repo_type: &'a Repotype,
-  pub owner_id: i32,
-}
-
-#[derive(Queryable, Selectable)]
 #[diesel(table_name = crate::schema::groups)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Group {
