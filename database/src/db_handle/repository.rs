@@ -179,6 +179,13 @@ mod tests {
       assert_eq!(repository.owner_id, user.id);
     }
 
+    fn get_nonexistent_repository_by_name(tx: &mut TransactionHandler) {
+      let name = "test-repo";
+      let repository = tx.get_repository_by_name(name)?;
+
+      assert!(repository.is_none());
+    }
+
     fn list_user_repositories(tx: &mut TransactionHandler) {
       let repos = vec![
         ("test-repo-1", Repotype::Default),

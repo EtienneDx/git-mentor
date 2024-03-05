@@ -213,6 +213,11 @@ mod tests {
       assert_eq!(user.pubkey, vec![]);
     }
 
+    fn get_nonexistent_user_by_id(tx: &mut TransactionHandler) {
+      let user = tx.get_user_by_id(1)?;
+      assert!(user.is_none());
+    }
+
     fn get_user_by_username(tx: &mut TransactionHandler) {
       let username = "get_user_by_username";
       let email = "abc";
@@ -227,6 +232,11 @@ mod tests {
       assert_eq!(user.pubkey, vec![]);
     }
 
+    fn get_nonexistent_user_by_username(tx: &mut TransactionHandler) {
+      let user = tx.get_user_by_username("nonexistent")?;
+      assert!(user.is_none());
+    }
+
     fn get_user_by_email(tx: &mut TransactionHandler) {
       let username = "get_user_by_email";
       let email = "abc";
@@ -239,6 +249,11 @@ mod tests {
       assert_eq!(user.email, email);
       assert_eq!(user.password, password);
       assert_eq!(user.pubkey, vec![]);
+    }
+
+    fn get_nonexistent_user_by_email(tx: &mut TransactionHandler) {
+      let user = tx.get_user_by_email("nonexistent")?;
+      assert!(user.is_none());
     }
 
     fn insert_user_public_key_without_existing(tx: &mut TransactionHandler) {
