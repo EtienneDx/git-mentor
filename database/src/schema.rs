@@ -89,6 +89,7 @@ diesel::table! {
     users (id) {
         id -> Int4,
         username -> Text,
+        password -> Text,
         email -> Text,
         pubkey -> Array<Nullable<Text>>,
     }
