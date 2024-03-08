@@ -11,53 +11,6 @@ pub mod db_handle;
 pub use db_handle::DbHandle;
 pub use db_handle::TransactionHandler;
 
-impl Assignment {
-  pub fn create(
-    conn: &mut PgConnection,
-    group_id: i32,
-    base_repo_id: i32,
-    test_repo_id: i32,
-    correction_repo_id: i32,
-  ) -> Assignment {
-    use crate::schema::assignments;
-
-    let new_assignment = NewAssignment {
-      group_id,
-      base_repo_id,
-      test_repo_id,
-      correction_repo_id,
-    };
-
-    diesel::insert_into(assignments::table)
-      .values(&new_assignment)
-      .returning(Assignment::as_returning())
-      .get_result(conn)
-      .expect("Error saving new assignment")
-  }
-
-  pub fn get_with_id(conn: &mut PgConnection, assignment_id: i32) -> Option<Assignment> {
-    use crate::schema::assignments::dsl;
-
-    let assignment = dsl::assignments
-      .filter(dsl::id.eq(assignment_id))
-      .select(Assignment::as_select())
-      .first(conn)
-      .optional();
-    match assignment {
-      Ok(assignment) => assignment,
-      Err(_) => None,
-    }
-  }
-
-  pub fn delete(conn: &mut PgConnection, assignment_id: i32) -> bool {
-    use crate::schema::assignments::dsl::assignments;
-
-    diesel::delete(assignments.find(assignment_id))
-      .execute(conn)
-      .is_ok()
-  }
-}
-
 impl Cirun {
   pub fn create(
     conn: &mut PgConnection,

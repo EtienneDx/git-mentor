@@ -9,6 +9,7 @@ pub mod tests;
 pub mod group;
 pub mod repository;
 pub mod user;
+pub mod assignment;
 
 pub struct DbHandle {
   conn: PgConnection,

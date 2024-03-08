@@ -5,11 +5,11 @@ use diesel::{
 
 use crate::{
   error::DatabaseError,
-  schema::{group_students, groups},
+  schema::{assignments, group_students, groups},
   TransactionHandler,
 };
 
-use super::user::User;
+use super::{assignment::Assignment, user::User};
 
 #[derive(Queryable, Selectable)]
 #[diesel(table_name = crate::schema::groups)]
@@ -53,6 +53,8 @@ pub trait GroupTransactionHandler {
 
   fn set_teacher(&mut self, group_id: i32, teacher_id: Option<i32>)
     -> Result<Group, DatabaseError>;
+    
+  fn list_group_assignments(&mut self, group_id: i32) -> Result<Vec<Assignment>, DatabaseError>;
 
   fn add_student(&mut self, group_id: i32, student_id: i32) -> Result<(), DatabaseError>;
 
@@ -115,6 +117,16 @@ impl<'a> GroupTransactionHandler for TransactionHandler<'a> {
       .get_result(self.conn)
       .map_err(DatabaseError::from)
   }
+    
+  fn list_group_assignments(&mut self, group_id: i32) -> Result<Vec<Assignment>, DatabaseError> {
+    use crate::schema::assignments::dsl;
+
+    assignments::table
+      .filter(dsl::group_id.eq(group_id))
+      .select(Assignment::as_select())
+      .load(self.conn)
+      .map_err(DatabaseError::from)
+  }
 
   fn add_student(&mut self, group_id: i32, student_id: i32) -> Result<(), DatabaseError> {
     let new_group_student = NewGroupStudent {
@@ -153,7 +165,7 @@ impl<'a> GroupTransactionHandler for TransactionHandler<'a> {
 #[cfg(test)]
 mod tests {
   use crate::{
-    db_handle::{group::GroupTransactionHandler, user::UserTransactionHandler},
+    db_handle::{assignment::AssignmentTransactionHandler, group::GroupTransactionHandler, repository::{RepositoryTransactionHandler, Repotype}, user::UserTransactionHandler},
     transaction_tests,
   };
 
@@ -220,6 +232,25 @@ mod tests {
       let group = tx.create_group("test_group", Some(teacher.id))?;
       let group = tx.set_teacher(group.id, None)?;
       assert_eq!(group.teacher_id, None);
+    }
+
+    fn list_group_assignments(tx: &mut TransactionHandler) {
+      let user = tx.create_user("user", "email", "password", None)?;
+      let group = tx.create_group("test_group", None)?;
+      let assignments = vec![
+        "repo1",
+        "repo2",
+        "repo3",
+      ];
+      assignments.iter().for_each(|repo_name| {
+        let repo = tx.create_repository(repo_name, &Repotype::Default, user.id, None).expect("Error creating repository");
+        tx.create_assignment(
+          group.id,
+          repo.id,
+        ).expect("Error creating assignment");
+      });
+      let assignments = tx.list_group_assignments(group.id)?;
+      assert_eq!(assignments.len(), 3);
     }
 
     fn add_student(tx: &mut TransactionHandler) {

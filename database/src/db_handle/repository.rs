@@ -45,6 +45,8 @@ pub trait RepositoryTransactionHandler {
     assignment_id: Option<i32>,
   ) -> Result<Repository, DatabaseError>;
 
+  fn get_repository_by_id(&mut self, repository_id: i32) -> Result<Option<Repository>, DatabaseError>;
+
   fn get_repository_by_name(&mut self, name: &str) -> Result<Option<Repository>, DatabaseError>;
 
   fn list_user_repositories(&mut self, user_id: i32) -> Result<Vec<Repository>, DatabaseError>;
@@ -75,6 +77,17 @@ impl<'a> RepositoryTransactionHandler for TransactionHandler<'a> {
       .values(&new_repository)
       .returning(Repository::as_returning())
       .get_result(self.conn)
+      .map_err(DatabaseError::from)
+  }
+
+  fn get_repository_by_id(&mut self, repository_id: i32) -> Result<Option<Repository>, DatabaseError> {
+    use crate::schema::repositories::dsl;
+
+    dsl::repositories
+      .filter(dsl::id.eq(repository_id))
+      .select(Repository::as_select())
+      .first(self.conn)
+      .optional()
       .map_err(DatabaseError::from)
   }
 
@@ -154,6 +167,25 @@ mod tests {
       let user = tx.create_user("test_create_repository", "abc", "abc", None)?;
 
       let repository = tx.create_repository(name, &repo_type, user.id, None)?;
+      assert_eq!(repository.name, name);
+      assert_eq!(repository.repo_type, repo_type);
+      assert_eq!(repository.owner_id, user.id);
+    }
+
+    fn get_unknown_repository_by_id(tx: &mut TransactionHandler) {
+      let repository = tx.get_repository_by_id(1)?;
+
+      assert!(repository.is_none());
+    }
+
+    fn get_repository_by_id(tx: &mut TransactionHandler) {
+      let name = "test-repo";
+      let repo_type = Repotype::Default;
+
+      let user = tx.create_user("test_get_repository_by_id", "abc", "abc", None)?;
+      let repository = tx.create_repository(name, &repo_type, user.id, None)?;
+
+      let repository = tx.get_repository_by_id(repository.id)?.expect("Repository not found");
       assert_eq!(repository.name, name);
       assert_eq!(repository.repo_type, repo_type);
       assert_eq!(repository.owner_id, user.id);

@@ -5,27 +5,6 @@ use diesel::prelude::*;
 use diesel::serialize::{self, IsNull, Output, ToSql};
 use std::io::Write;
 
-#[derive(Queryable, Selectable)]
-#[diesel(table_name = crate::schema::assignments)]
-#[diesel(check_for_backend(diesel::pg::Pg))]
-pub struct Assignment {
-  pub id: i32,
-  pub group_id: i32,
-  pub base_repo_id: i32,
-  pub test_repo_id: Option<i32>,
-  pub correction_repo_id: Option<i32>,
-}
-
-#[derive(Insertable)]
-#[diesel(table_name = crate::schema::assignments)]
-#[diesel(check_for_backend(diesel::pg::Pg))]
-pub struct NewAssignment {
-  pub group_id: i32,
-  pub base_repo_id: i32,
-  pub test_repo_id: i32,
-  pub correction_repo_id: i32,
-}
-
 #[derive(Debug, diesel_derive_enum::DbEnum)]
 #[ExistingTypePath = "crate::schema::sql_types::Commenttype"]
 pub enum Commenttype {
