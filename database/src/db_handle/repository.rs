@@ -45,7 +45,10 @@ pub trait RepositoryTransactionHandler {
     assignment_id: Option<i32>,
   ) -> Result<Repository, DatabaseError>;
 
-  fn get_repository_by_id(&mut self, repository_id: i32) -> Result<Option<Repository>, DatabaseError>;
+  fn get_repository_by_id(
+    &mut self,
+    repository_id: i32,
+  ) -> Result<Option<Repository>, DatabaseError>;
 
   fn get_repository_by_name(&mut self, name: &str) -> Result<Option<Repository>, DatabaseError>;
 
@@ -80,7 +83,10 @@ impl<'a> RepositoryTransactionHandler for TransactionHandler<'a> {
       .map_err(DatabaseError::from)
   }
 
-  fn get_repository_by_id(&mut self, repository_id: i32) -> Result<Option<Repository>, DatabaseError> {
+  fn get_repository_by_id(
+    &mut self,
+    repository_id: i32,
+  ) -> Result<Option<Repository>, DatabaseError> {
     use crate::schema::repositories::dsl;
 
     dsl::repositories

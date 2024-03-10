@@ -53,7 +53,7 @@ pub trait GroupTransactionHandler {
 
   fn set_teacher(&mut self, group_id: i32, teacher_id: Option<i32>)
     -> Result<Group, DatabaseError>;
-    
+
   fn list_group_assignments(&mut self, group_id: i32) -> Result<Vec<Assignment>, DatabaseError>;
 
   fn add_student(&mut self, group_id: i32, student_id: i32) -> Result<(), DatabaseError>;
@@ -117,7 +117,7 @@ impl<'a> GroupTransactionHandler for TransactionHandler<'a> {
       .get_result(self.conn)
       .map_err(DatabaseError::from)
   }
-    
+
   fn list_group_assignments(&mut self, group_id: i32) -> Result<Vec<Assignment>, DatabaseError> {
     use crate::schema::assignments::dsl;
 
@@ -165,7 +165,12 @@ impl<'a> GroupTransactionHandler for TransactionHandler<'a> {
 #[cfg(test)]
 mod tests {
   use crate::{
-    db_handle::{assignment::AssignmentTransactionHandler, group::GroupTransactionHandler, repository::{RepositoryTransactionHandler, Repotype}, user::UserTransactionHandler},
+    db_handle::{
+      assignment::AssignmentTransactionHandler,
+      group::GroupTransactionHandler,
+      repository::{RepositoryTransactionHandler, Repotype},
+      user::UserTransactionHandler,
+    },
     transaction_tests,
   };
 

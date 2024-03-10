@@ -1,8 +1,14 @@
 use diesel::{
-  deserialize::Queryable, prelude::Insertable, ExpressionMethods, JoinOnDsl, NullableExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl, Selectable, SelectableHelper
+  deserialize::Queryable, prelude::Insertable, ExpressionMethods, JoinOnDsl,
+  NullableExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl, Selectable,
+  SelectableHelper,
 };
 
-use crate::{error::DatabaseError, schema::{assignments, repositories}, TransactionHandler};
+use crate::{
+  error::DatabaseError,
+  schema::{assignments, repositories},
+  TransactionHandler,
+};
 
 use super::{group::Group, repository::Repository};
 
@@ -63,13 +69,25 @@ pub trait AssignmentTransactionHandler {
 
   fn get_assignment_group(&mut self, assignment_id: i32) -> Result<Option<Group>, DatabaseError>;
 
-  fn get_assignment_base_repo(&mut self, assignment_id: i32) -> Result<Option<Repository>, DatabaseError>;
+  fn get_assignment_base_repo(
+    &mut self,
+    assignment_id: i32,
+  ) -> Result<Option<Repository>, DatabaseError>;
 
-  fn get_assignment_test_repo(&mut self, assignment_id: i32) -> Result<Option<Repository>, DatabaseError>;
+  fn get_assignment_test_repo(
+    &mut self,
+    assignment_id: i32,
+  ) -> Result<Option<Repository>, DatabaseError>;
 
-  fn get_assignment_correction_repo(&mut self, assignment_id: i32) -> Result<Option<Repository>, DatabaseError>;
+  fn get_assignment_correction_repo(
+    &mut self,
+    assignment_id: i32,
+  ) -> Result<Option<Repository>, DatabaseError>;
 
-  fn get_assignment_submission_repos(&mut self, assignment_id: i32) -> Result<Vec<Repository>, DatabaseError>;
+  fn get_assignment_submission_repos(
+    &mut self,
+    assignment_id: i32,
+  ) -> Result<Vec<Repository>, DatabaseError>;
 
   fn delete_assignment(&mut self, assignment_id: i32) -> Result<bool, DatabaseError>;
 }
@@ -131,7 +149,12 @@ impl<'a> AssignmentTransactionHandler for TransactionHandler<'a> {
     test_repo_id: i32,
     correction_repo_id: i32,
   ) -> Result<Assignment, DatabaseError> {
-    self.create_assignment_inner(group_id, base_repo_id, Some(test_repo_id), Some(correction_repo_id))
+    self.create_assignment_inner(
+      group_id,
+      base_repo_id,
+      Some(test_repo_id),
+      Some(correction_repo_id),
+    )
   }
 
   fn get_assignment_by_id(
@@ -165,12 +188,17 @@ impl<'a> AssignmentTransactionHandler for TransactionHandler<'a> {
     }
   }
 
-  fn get_assignment_base_repo(&mut self, assignment_id: i32) -> Result<Option<Repository>, DatabaseError> {
+  fn get_assignment_base_repo(
+    &mut self,
+    assignment_id: i32,
+  ) -> Result<Option<Repository>, DatabaseError> {
     use crate::schema::assignments::dsl;
 
     let repo = assignments::table
       .filter(dsl::id.eq(assignment_id))
-      .inner_join(crate::schema::repositories::table.on(dsl::base_repo_id.eq(repositories::dsl::id)))
+      .inner_join(
+        crate::schema::repositories::table.on(dsl::base_repo_id.eq(repositories::dsl::id)),
+      )
       .select(Repository::as_select())
       .first(self.conn)
       .optional();
@@ -182,12 +210,18 @@ impl<'a> AssignmentTransactionHandler for TransactionHandler<'a> {
     }
   }
 
-  fn get_assignment_test_repo(&mut self, assignment_id: i32) -> Result<Option<Repository>, DatabaseError> {
+  fn get_assignment_test_repo(
+    &mut self,
+    assignment_id: i32,
+  ) -> Result<Option<Repository>, DatabaseError> {
     use crate::schema::assignments::dsl;
 
     let repo = assignments::table
       .filter(dsl::id.eq(assignment_id))
-      .inner_join(crate::schema::repositories::table.on(dsl::test_repo_id.eq(repositories::dsl::id.nullable())))
+      .inner_join(
+        crate::schema::repositories::table
+          .on(dsl::test_repo_id.eq(repositories::dsl::id.nullable())),
+      )
       .select(Repository::as_select())
       .first(self.conn)
       .optional();
@@ -199,12 +233,18 @@ impl<'a> AssignmentTransactionHandler for TransactionHandler<'a> {
     }
   }
 
-  fn get_assignment_correction_repo(&mut self, assignment_id: i32) -> Result<Option<Repository>, DatabaseError> {
+  fn get_assignment_correction_repo(
+    &mut self,
+    assignment_id: i32,
+  ) -> Result<Option<Repository>, DatabaseError> {
     use crate::schema::assignments::dsl;
 
     let repo = assignments::table
       .filter(dsl::id.eq(assignment_id))
-      .inner_join(crate::schema::repositories::table.on(dsl::correction_repo_id.eq(repositories::dsl::id.nullable())))
+      .inner_join(
+        crate::schema::repositories::table
+          .on(dsl::correction_repo_id.eq(repositories::dsl::id.nullable())),
+      )
       .select(Repository::as_select())
       .first(self.conn)
       .optional();
@@ -216,7 +256,10 @@ impl<'a> AssignmentTransactionHandler for TransactionHandler<'a> {
     }
   }
 
-  fn get_assignment_submission_repos(&mut self, assignment_id: i32) -> Result<Vec<Repository>, DatabaseError> {
+  fn get_assignment_submission_repos(
+    &mut self,
+    assignment_id: i32,
+  ) -> Result<Vec<Repository>, DatabaseError> {
     use crate::schema::repositories::dsl;
 
     repositories::table
@@ -238,11 +281,18 @@ impl<'a> AssignmentTransactionHandler for TransactionHandler<'a> {
 
 #[cfg(test)]
 mod tests {
-  use crate::{db_handle::{group::GroupTransactionHandler, repository::{RepositoryTransactionHandler, Repotype}, user::UserTransactionHandler}, transaction_tests};
+  use crate::{
+    db_handle::{
+      group::GroupTransactionHandler,
+      repository::{RepositoryTransactionHandler, Repotype},
+      user::UserTransactionHandler,
+    },
+    transaction_tests,
+  };
 
   use super::AssignmentTransactionHandler;
 
-  transaction_tests!{
+  transaction_tests! {
     fn create_assignment_with_invalid_group(tx: &mut TransactionHandler) {
       let user = tx.create_user("username", "email", "password", None)?;
       let repo = tx.create_repository("test-repo", &Repotype::Default, user.id, None)?;

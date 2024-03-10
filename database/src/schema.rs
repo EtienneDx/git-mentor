@@ -6,10 +6,6 @@ pub mod sql_types {
   pub struct Commentauthor;
 
   #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
-  #[diesel(postgres_type(name = "commenttype"))]
-  pub struct Commenttype;
-
-  #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
   #[diesel(postgres_type(name = "repotype"))]
   pub struct Repotype;
 
@@ -42,7 +38,6 @@ diesel::table! {
 
 diesel::table! {
     use diesel::sql_types::*;
-    use super::sql_types::Commenttype;
     use super::sql_types::Commentauthor;
 
     comments (id) {
@@ -50,7 +45,9 @@ diesel::table! {
         repository_id -> Int4,
         #[max_length = 255]
         commit_hash -> Varchar,
-        comment_type -> Commenttype,
+        respond_to -> Nullable<Int4>,
+        #[max_length = 255]
+        file_path -> Nullable<Varchar>,
         message -> Text,
         author_type -> Commentauthor,
         author_id -> Nullable<Int4>,

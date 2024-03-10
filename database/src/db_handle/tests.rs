@@ -44,7 +44,7 @@ macro_rules! transaction_tests {
           Err(TestError::Expected)
         });
 
-        assert!(err.is_err());
+        assert!(err.is_err(), "Test modified database without reverting! Tests shouldn't return any values!");
         let err = err.unwrap_err();
         assert!(matches!(err, TestError::Expected), "{:?}", err);
       }

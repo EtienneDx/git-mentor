@@ -6,10 +6,12 @@ use crate::error::DatabaseError;
 #[cfg(test)]
 pub mod tests;
 
+pub mod assignment;
+pub mod cirun;
+pub mod comment;
 pub mod group;
 pub mod repository;
 pub mod user;
-pub mod assignment;
 
 pub struct DbHandle {
   conn: PgConnection,
