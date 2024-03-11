@@ -1,0 +1,19 @@
+CREATE TABLE users (
+  id SERIAL PRIMARY KEY,
+  username TEXT NOT NULL UNIQUE,
+  password TEXT NOT NULL,
+  email TEXT NOT NULL UNIQUE,
+  pubkey TEXT[] NOT NULL
+);
+
+CREATE TABLE groups (
+  id SERIAL PRIMARY KEY,
+  name TEXT NOT NULL UNIQUE,
+  teacher_id INTEGER REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE TABLE group_students (
+  group_id INTEGER NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+  student_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  PRIMARY KEY (group_id, student_id)
+);

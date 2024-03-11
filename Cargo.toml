@@ -1,6 +1,7 @@
 [workspace]
 
 members = [
+  "database",
   "git-server",
   "git-server-example",
   "gmt-api",

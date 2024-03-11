@@ -3,3 +3,5 @@ ignore:
   - "**/test/**/*.rs"
   - "ssh-server/src/wrapper.rs"
   - "gmt-api/src/swagger.rs"
+  - "database/src/schema.rs"
+  - "database/src/db_handle/tests.rs"
