@@ -3,7 +3,7 @@ use diesel::{
   RunQueryDsl, Selectable, SelectableHelper,
 };
 
-use crate::{error::DatabaseError, TransactionHandler};
+use crate::{error::DatabaseError, DbHandle};
 
 use super::group::Group;
 
@@ -28,7 +28,7 @@ pub struct NewUser<'a> {
   pub pubkey: &'a Vec<Option<String>>,
 }
 
-pub trait UserTransactionHandler {
+pub trait UserDbHandle {
   fn create_user(
     &mut self,
     username: &str,
@@ -52,7 +52,7 @@ pub trait UserTransactionHandler {
   fn list_belongs_groups(&mut self, user_id: i32) -> Result<Vec<Group>, DatabaseError>;
 }
 
-impl<'a> UserTransactionHandler for TransactionHandler<'a> {
+impl UserDbHandle for DbHandle {
   fn create_user(
     &mut self,
     username: &str,
@@ -76,7 +76,7 @@ impl<'a> UserTransactionHandler for TransactionHandler<'a> {
     diesel::insert_into(users::table)
       .values(&new_user)
       .returning(User::as_returning())
-      .get_result(self.conn)
+      .get_result(&mut self.conn)
       .map_err(DatabaseError::from)
   }
 
@@ -86,7 +86,7 @@ impl<'a> UserTransactionHandler for TransactionHandler<'a> {
     let user = dsl::users
       .filter(dsl::id.eq(user_id))
       .select(User::as_select())
-      .first(self.conn)
+      .first(&mut self.conn)
       .optional();
 
     match user {
@@ -104,7 +104,7 @@ impl<'a> UserTransactionHandler for TransactionHandler<'a> {
     let user = dsl::users
       .filter(dsl::username.eq(username))
       .select(User::as_select())
-      .first(self.conn)
+      .first(&mut self.conn)
       .optional();
 
     match user {
@@ -122,7 +122,7 @@ impl<'a> UserTransactionHandler for TransactionHandler<'a> {
     let user = dsl::users
       .filter(dsl::email.eq(email))
       .select(User::as_select())
-      .first(self.conn)
+      .first(&mut self.conn)
       .optional();
 
     match user {
@@ -139,7 +139,7 @@ impl<'a> UserTransactionHandler for TransactionHandler<'a> {
       "UPDATE users SET pubkey = array_append(pubkey, '{}') WHERE id = {}",
       pubkey, user_id
     ))
-    .execute(self.conn)
+    .execute(&mut self.conn)
     .map(|_| ())
     .map_err(DatabaseError::from)
   }
@@ -148,7 +148,7 @@ impl<'a> UserTransactionHandler for TransactionHandler<'a> {
     use crate::schema::users::dsl::users;
 
     diesel::delete(users.find(user_id))
-      .execute(self.conn)
+      .execute(&mut self.conn)
       .map(|_| ())
       .map_err(DatabaseError::from)
   }
@@ -159,7 +159,7 @@ impl<'a> UserTransactionHandler for TransactionHandler<'a> {
     dsl::groups
       .filter(dsl::teacher_id.eq(user_id))
       .select(Group::as_select())
-      .load(self.conn)
+      .load(&mut self.conn)
       .map_err(DatabaseError::from)
   }
 
@@ -170,7 +170,7 @@ impl<'a> UserTransactionHandler for TransactionHandler<'a> {
       .filter(dsl::student_id.eq(user_id))
       .inner_join(crate::schema::groups::table)
       .select(Group::as_select())
-      .load(self.conn)
+      .load(&mut self.conn)
       .map_err(DatabaseError::from)
   }
 }
@@ -179,16 +179,16 @@ impl<'a> UserTransactionHandler for TransactionHandler<'a> {
 mod tests {
   use crate::{
     db_handle::{
-      group::GroupTransactionHandler,
-      repository::{RepositoryTransactionHandler, Repotype},
-      user::UserTransactionHandler,
+      group::GroupDbHandle,
+      repository::{RepositoryDbHandle, Repotype},
+      user::UserDbHandle,
     },
     error::DatabaseError,
     transaction_tests,
   };
 
   transaction_tests! {
-    fn create_user(tx: &mut TransactionHandler) {
+    fn create_user(tx: &mut DbHandle) {
       let username = "create_user";
       let email = "abc";
       let password = "abc";
@@ -200,7 +200,7 @@ mod tests {
       assert_eq!(user.pubkey, vec![]);
     }
 
-    fn get_user_by_id(tx: &mut TransactionHandler) {
+    fn get_user_by_id(tx: &mut DbHandle) {
       let username = "get_user_by_id";
       let email = "abc";
       let password = "abc";
@@ -213,12 +213,12 @@ mod tests {
       assert_eq!(user.pubkey, vec![]);
     }
 
-    fn get_nonexistent_user_by_id(tx: &mut TransactionHandler) {
+    fn get_nonexistent_user_by_id(tx: &mut DbHandle) {
       let user = tx.get_user_by_id(1)?;
       assert!(user.is_none());
     }
 
-    fn get_user_by_username(tx: &mut TransactionHandler) {
+    fn get_user_by_username(tx: &mut DbHandle) {
       let username = "get_user_by_username";
       let email = "abc";
       let password = "abc";
@@ -232,12 +232,12 @@ mod tests {
       assert_eq!(user.pubkey, vec![]);
     }
 
-    fn get_nonexistent_user_by_username(tx: &mut TransactionHandler) {
+    fn get_nonexistent_user_by_username(tx: &mut DbHandle) {
       let user = tx.get_user_by_username("nonexistent")?;
       assert!(user.is_none());
     }
 
-    fn get_user_by_email(tx: &mut TransactionHandler) {
+    fn get_user_by_email(tx: &mut DbHandle) {
       let username = "get_user_by_email";
       let email = "abc";
       let password = "abc";
@@ -251,12 +251,12 @@ mod tests {
       assert_eq!(user.pubkey, vec![]);
     }
 
-    fn get_nonexistent_user_by_email(tx: &mut TransactionHandler) {
+    fn get_nonexistent_user_by_email(tx: &mut DbHandle) {
       let user = tx.get_user_by_email("nonexistent")?;
       assert!(user.is_none());
     }
 
-    fn insert_user_public_key_without_existing(tx: &mut TransactionHandler) {
+    fn insert_user_public_key_without_existing(tx: &mut DbHandle) {
       let username = "insert_user_public_key";
       let email = "abc";
       let password = "abc";
@@ -274,7 +274,7 @@ mod tests {
       );
     }
 
-    fn insert_user_public_key_with_existing(tx: &mut TransactionHandler) {
+    fn insert_user_public_key_with_existing(tx: &mut DbHandle) {
       let username = "insert_user_public_key";
       let email = "abc";
       let password = "abc";
@@ -300,7 +300,7 @@ mod tests {
       );
     }
 
-    fn delete_user(tx: &mut TransactionHandler) {
+    fn delete_user(tx: &mut DbHandle) {
       let username = "delete_user";
       let email = "abc";
       let password = "abc";
@@ -312,7 +312,7 @@ mod tests {
       assert!(user.is_none());
     }
 
-    fn delete_user_with_repo_fails(tx: &mut TransactionHandler) {
+    fn delete_user_with_repo_fails(tx: &mut DbHandle) {
       let username = "delete_user_with_repo_fails";
       let email = "abc";
       let password = "abc";
@@ -324,7 +324,7 @@ mod tests {
       assert!(matches!(err, DatabaseError::DieselError(_)), "Expected diesel error, got: {:?}", err);
     }
 
-    fn list_teaching_groups_none(tx: &mut TransactionHandler) {
+    fn list_teaching_groups_none(tx: &mut DbHandle) {
       let username = "list_teaching_groups";
       let email = "abc";
       let password = "abc";
@@ -335,7 +335,7 @@ mod tests {
       assert!(groups.is_empty());
     }
 
-    fn list_teaching_groups_one(tx: &mut TransactionHandler) {
+    fn list_teaching_groups_one(tx: &mut DbHandle) {
       let username = "list_teaching_groups";
       let email = "abc";
       let password = "abc";
@@ -347,7 +347,7 @@ mod tests {
       assert_eq!(groups.len(), 1);
     }
 
-    fn list_belongs_groups_none(tx: &mut TransactionHandler) {
+    fn list_belongs_groups_none(tx: &mut DbHandle) {
       let username = "list_belongs_groups";
       let email = "abc";
       let password = "abc";
@@ -358,7 +358,7 @@ mod tests {
       assert!(groups.is_empty());
     }
 
-    fn list_belongs_groups(tx: &mut TransactionHandler) {
+    fn list_belongs_groups(tx: &mut DbHandle) {
       let username = "list_belongs_groups";
       let email = "abc";
       let password = "abc";

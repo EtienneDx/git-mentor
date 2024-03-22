@@ -4,7 +4,7 @@ use diesel::{
 };
 use diesel_derive_enum::DbEnum;
 
-use crate::{error::DatabaseError, TransactionHandler};
+use crate::{error::DatabaseError, DbHandle};
 
 use super::user::User;
 
@@ -36,7 +36,7 @@ pub struct NewRepository<'a> {
   pub assignment_id: Option<i32>,
 }
 
-pub trait RepositoryTransactionHandler {
+pub trait RepositoryDbHandle {
   fn create_repository(
     &mut self,
     name: &str,
@@ -59,7 +59,7 @@ pub trait RepositoryTransactionHandler {
   fn delete_repository(&mut self, repository_id: i32) -> bool;
 }
 
-impl<'a> RepositoryTransactionHandler for TransactionHandler<'a> {
+impl RepositoryDbHandle for DbHandle {
   fn create_repository(
     &mut self,
     name: &str,
@@ -79,7 +79,7 @@ impl<'a> RepositoryTransactionHandler for TransactionHandler<'a> {
     diesel::insert_into(repositories::table)
       .values(&new_repository)
       .returning(Repository::as_returning())
-      .get_result(self.conn)
+      .get_result(&mut self.conn)
       .map_err(DatabaseError::from)
   }
 
@@ -92,7 +92,7 @@ impl<'a> RepositoryTransactionHandler for TransactionHandler<'a> {
     dsl::repositories
       .filter(dsl::id.eq(repository_id))
       .select(Repository::as_select())
-      .first(self.conn)
+      .first(&mut self.conn)
       .optional()
       .map_err(DatabaseError::from)
   }
@@ -103,7 +103,7 @@ impl<'a> RepositoryTransactionHandler for TransactionHandler<'a> {
     let repository = dsl::repositories
       .filter(dsl::name.eq(name))
       .select(Repository::as_select())
-      .first(self.conn)
+      .first(&mut self.conn)
       .optional();
 
     match repository {
@@ -121,7 +121,7 @@ impl<'a> RepositoryTransactionHandler for TransactionHandler<'a> {
     dsl::repositories
       .filter(dsl::owner_id.eq(user_id))
       .select(Repository::as_select())
-      .load(self.conn)
+      .load(&mut self.conn)
       .map_err(DatabaseError::from)
   }
 
@@ -133,7 +133,7 @@ impl<'a> RepositoryTransactionHandler for TransactionHandler<'a> {
       .inner_join(users::table)
       .filter(dsl::id.eq(repository_id))
       .select(User::as_select())
-      .first(self.conn)
+      .first(&mut self.conn)
       .map_err(DatabaseError::from)
   }
 
@@ -141,7 +141,7 @@ impl<'a> RepositoryTransactionHandler for TransactionHandler<'a> {
     use crate::schema::repositories::dsl::repositories;
 
     diesel::delete(repositories.find(repository_id))
-      .execute(self.conn)
+      .execute(&mut self.conn)
       .is_ok()
   }
 }
@@ -150,15 +150,15 @@ impl<'a> RepositoryTransactionHandler for TransactionHandler<'a> {
 mod tests {
   use crate::{
     db_handle::{
-      repository::{RepositoryTransactionHandler, Repotype},
-      user::UserTransactionHandler,
+      repository::{RepositoryDbHandle, Repotype},
+      user::UserDbHandle,
     },
     error::DatabaseError,
     transaction_tests,
   };
 
   transaction_tests! {
-    fn create_repository_unknown_user_fails(tx: &mut TransactionHandler) {
+    fn create_repository_unknown_user_fails(tx: &mut DbHandle) {
       let name = "test-repo";
       let repo_type = Repotype::Default;
       let repository = tx.create_repository(name, &repo_type, 1, None);
@@ -167,7 +167,7 @@ mod tests {
       assert!(matches!(err, DatabaseError::DieselError(_)), "Expected diesel error, got: {:?}", err);
     }
 
-    fn create_repository(tx: &mut TransactionHandler) {
+    fn create_repository(tx: &mut DbHandle) {
       let name = "test-repo";
       let repo_type = Repotype::Default;
       let user = tx.create_user("test_create_repository", "abc", "abc", None)?;
@@ -178,13 +178,13 @@ mod tests {
       assert_eq!(repository.owner_id, user.id);
     }
 
-    fn get_unknown_repository_by_id(tx: &mut TransactionHandler) {
+    fn get_unknown_repository_by_id(tx: &mut DbHandle) {
       let repository = tx.get_repository_by_id(1)?;
 
       assert!(repository.is_none());
     }
 
-    fn get_repository_by_id(tx: &mut TransactionHandler) {
+    fn get_repository_by_id(tx: &mut DbHandle) {
       let name = "test-repo";
       let repo_type = Repotype::Default;
 
@@ -197,14 +197,14 @@ mod tests {
       assert_eq!(repository.owner_id, user.id);
     }
 
-    fn get_unknown_repository_by_name(tx: &mut TransactionHandler) {
+    fn get_unknown_repository_by_name(tx: &mut DbHandle) {
       let name = "test-repo";
       let repository = tx.get_repository_by_name(name)?;
 
       assert!(repository.is_none());
     }
 
-    fn get_repository_by_name(tx: &mut TransactionHandler) {
+    fn get_repository_by_name(tx: &mut DbHandle) {
       let name = "test-repo";
       let repo_type = Repotype::Default;
 
@@ -217,14 +217,14 @@ mod tests {
       assert_eq!(repository.owner_id, user.id);
     }
 
-    fn get_nonexistent_repository_by_name(tx: &mut TransactionHandler) {
+    fn get_nonexistent_repository_by_name(tx: &mut DbHandle) {
       let name = "test-repo";
       let repository = tx.get_repository_by_name(name)?;
 
       assert!(repository.is_none());
     }
 
-    fn list_user_repositories(tx: &mut TransactionHandler) {
+    fn list_user_repositories(tx: &mut DbHandle) {
       let repos = vec![
         ("test-repo-1", Repotype::Default),
         ("test-repo-2", Repotype::Default),
@@ -240,13 +240,13 @@ mod tests {
       assert_eq!(repositories.len(), repos.len());
     }
 
-    fn list_no_user_repositories(tx: &mut TransactionHandler) {
+    fn list_no_user_repositories(tx: &mut DbHandle) {
       let repositories = tx.list_user_repositories(1)?;
 
       assert!(repositories.is_empty());
     }
 
-    fn get_repository_owner(tx: &mut TransactionHandler) {
+    fn get_repository_owner(tx: &mut DbHandle) {
       let user = tx.create_user("test_get_repository_owner", "abc", "abc", None)?;
       let repository = tx.create_repository("test-repo", &Repotype::Default, user.id, None)?;
 
@@ -254,7 +254,7 @@ mod tests {
       assert_eq!(owner.id, user.id);
     }
 
-    fn delete_repository(tx: &mut TransactionHandler) {
+    fn delete_repository(tx: &mut DbHandle) {
       let user = tx.create_user("test_delete_repository", "abc", "abc", None)?;
       let repository = tx.create_repository("test-repo", &Repotype::Default, user.id, None)?;
 

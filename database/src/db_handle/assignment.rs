@@ -7,7 +7,7 @@ use diesel::{
 use crate::{
   error::DatabaseError,
   schema::{assignments, repositories},
-  TransactionHandler,
+  DbHandle,
 };
 
 use super::{group::Group, repository::Repository};
@@ -33,7 +33,7 @@ pub struct NewAssignment {
   pub correction_repo_id: Option<i32>,
 }
 
-pub trait AssignmentTransactionHandler {
+pub trait AssignmentDbHandle {
   fn create_assignment(
     &mut self,
     group_id: i32,
@@ -92,7 +92,7 @@ pub trait AssignmentTransactionHandler {
   fn delete_assignment(&mut self, assignment_id: i32) -> Result<bool, DatabaseError>;
 }
 
-impl<'a> TransactionHandler<'a> {
+impl DbHandle {
   fn create_assignment_inner(
     &mut self,
     group_id: i32,
@@ -110,12 +110,12 @@ impl<'a> TransactionHandler<'a> {
     diesel::insert_into(assignments::table)
       .values(&new_assignment)
       .returning(Assignment::as_select())
-      .get_result(self.conn)
+      .get_result(&mut self.conn)
       .map_err(DatabaseError::from)
   }
 }
 
-impl<'a> AssignmentTransactionHandler for TransactionHandler<'a> {
+impl AssignmentDbHandle for DbHandle {
   fn create_assignment(
     &mut self,
     group_id: i32,
@@ -166,7 +166,7 @@ impl<'a> AssignmentTransactionHandler for TransactionHandler<'a> {
     assignments::table
       .filter(dsl::id.eq(assignment_id))
       .select(Assignment::as_select())
-      .first(self.conn)
+      .first(&mut self.conn)
       .optional()
       .map_err(DatabaseError::from)
   }
@@ -178,7 +178,7 @@ impl<'a> AssignmentTransactionHandler for TransactionHandler<'a> {
       .filter(dsl::id.eq(assignment_id))
       .inner_join(crate::schema::groups::table)
       .select(Group::as_select())
-      .first(self.conn)
+      .first(&mut self.conn)
       .optional();
 
     match group {
@@ -200,7 +200,7 @@ impl<'a> AssignmentTransactionHandler for TransactionHandler<'a> {
         crate::schema::repositories::table.on(dsl::base_repo_id.eq(repositories::dsl::id)),
       )
       .select(Repository::as_select())
-      .first(self.conn)
+      .first(&mut self.conn)
       .optional();
 
     match repo {
@@ -223,7 +223,7 @@ impl<'a> AssignmentTransactionHandler for TransactionHandler<'a> {
           .on(dsl::test_repo_id.eq(repositories::dsl::id.nullable())),
       )
       .select(Repository::as_select())
-      .first(self.conn)
+      .first(&mut self.conn)
       .optional();
 
     match repo {
@@ -246,7 +246,7 @@ impl<'a> AssignmentTransactionHandler for TransactionHandler<'a> {
           .on(dsl::correction_repo_id.eq(repositories::dsl::id.nullable())),
       )
       .select(Repository::as_select())
-      .first(self.conn)
+      .first(&mut self.conn)
       .optional();
 
     match repo {
@@ -265,7 +265,7 @@ impl<'a> AssignmentTransactionHandler for TransactionHandler<'a> {
     repositories::table
       .filter(dsl::assignment_id.eq(assignment_id))
       .select(Repository::as_select())
-      .load(self.conn)
+      .load(&mut self.conn)
       .map_err(DatabaseError::from)
   }
 
@@ -273,7 +273,7 @@ impl<'a> AssignmentTransactionHandler for TransactionHandler<'a> {
     use crate::schema::assignments::dsl;
 
     diesel::delete(assignments::table.filter(dsl::id.eq(assignment_id)))
-      .execute(self.conn)
+      .execute(&mut self.conn)
       .map(|n| n > 0)
       .map_err(DatabaseError::from)
   }
@@ -283,17 +283,17 @@ impl<'a> AssignmentTransactionHandler for TransactionHandler<'a> {
 mod tests {
   use crate::{
     db_handle::{
-      group::GroupTransactionHandler,
-      repository::{RepositoryTransactionHandler, Repotype},
-      user::UserTransactionHandler,
+      group::GroupDbHandle,
+      repository::{RepositoryDbHandle, Repotype},
+      user::UserDbHandle,
     },
     transaction_tests,
   };
 
-  use super::AssignmentTransactionHandler;
+  use super::AssignmentDbHandle;
 
   transaction_tests! {
-    fn create_assignment_with_invalid_group(tx: &mut TransactionHandler) {
+    fn create_assignment_with_invalid_group(tx: &mut DbHandle) {
       let user = tx.create_user("username", "email", "password", None)?;
       let repo = tx.create_repository("test-repo", &Repotype::Default, user.id, None)?;
       let group_id = 1;
@@ -301,13 +301,13 @@ mod tests {
       assert!(res.is_err());
     }
 
-    fn create_assignment_with_invalid_base_repo(tx: &mut TransactionHandler) {
+    fn create_assignment_with_invalid_base_repo(tx: &mut DbHandle) {
       let group = tx.create_group("test-group", None)?;
       let res = tx.create_assignment(group.id, 1);
       assert!(res.is_err());
     }
 
-    fn create_assignment_with_invalid_test_repo(tx: &mut TransactionHandler) {
+    fn create_assignment_with_invalid_test_repo(tx: &mut DbHandle) {
       let group = tx.create_group("test-group", None)?;
       let user = tx.create_user("username", "email", "password", None)?;
       let repo = tx.create_repository("test-repo", &Repotype::Default, user.id, None)?;
@@ -315,7 +315,7 @@ mod tests {
       assert!(res.is_err());
     }
 
-    fn create_assignment_with_invalid_correction_repo(tx: &mut TransactionHandler) {
+    fn create_assignment_with_invalid_correction_repo(tx: &mut DbHandle) {
       let group = tx.create_group("test-group", None)?;
       let user = tx.create_user("username", "email", "password", None)?;
       let repo = tx.create_repository("test-repo", &Repotype::Default, user.id, None)?;
@@ -323,7 +323,7 @@ mod tests {
       assert!(res.is_err());
     }
 
-    fn create_assignment_with_invalid_ci_and_correction_repos(tx: &mut TransactionHandler) {
+    fn create_assignment_with_invalid_ci_and_correction_repos(tx: &mut DbHandle) {
       let group = tx.create_group("test-group", None)?;
       let user = tx.create_user("username", "email", "password", None)?;
       let repo = tx.create_repository("test-repo", &Repotype::Default, user.id, None)?;
@@ -331,7 +331,7 @@ mod tests {
       assert!(res.is_err());
     }
 
-    fn create_assignment_success(tx: &mut TransactionHandler) {
+    fn create_assignment_success(tx: &mut DbHandle) {
       let group = tx.create_group("test-group", None)?;
       let user = tx.create_user("username", "email", "password", None)?;
       let repo = tx.create_repository("test-repo", &Repotype::Default, user.id, None)?;
@@ -342,7 +342,7 @@ mod tests {
       assert_eq!(assignment.correction_repo_id, None);
     }
 
-    fn create_assignment_with_ci_success(tx: &mut TransactionHandler) {
+    fn create_assignment_with_ci_success(tx: &mut DbHandle) {
       let group = tx.create_group("test-group", None)?;
       let user = tx.create_user("username", "email", "password", None)?;
       let base_repo = tx.create_repository("base-repo", &Repotype::Default, user.id, None)?;
@@ -354,7 +354,7 @@ mod tests {
       assert_eq!(assignment.correction_repo_id, None);
     }
 
-    fn create_assignment_with_correction_success(tx: &mut TransactionHandler) {
+    fn create_assignment_with_correction_success(tx: &mut DbHandle) {
       let group = tx.create_group("test-group", None)?;
       let user = tx.create_user("username", "email", "password", None)?;
       let base_repo = tx.create_repository("base-repo", &Repotype::Default, user.id, None)?;
@@ -366,7 +366,7 @@ mod tests {
       assert_eq!(assignment.correction_repo_id, Some(correction_repo.id));
     }
 
-    fn create_assignment_with_ci_and_correction_success(tx: &mut TransactionHandler) {
+    fn create_assignment_with_ci_and_correction_success(tx: &mut DbHandle) {
       let group = tx.create_group("test-group", None)?;
       let user = tx.create_user("username", "email", "password", None)?;
       let base_repo = tx.create_repository("base-repo", &Repotype::Default, user.id, None)?;
@@ -379,12 +379,12 @@ mod tests {
       assert_eq!(assignment.correction_repo_id, Some(correction_repo.id));
     }
 
-    fn get_nonexistent_assignment_by_id(tx: &mut TransactionHandler) {
+    fn get_nonexistent_assignment_by_id(tx: &mut DbHandle) {
       let assignment = tx.get_assignment_by_id(1)?;
       assert!(assignment.is_none());
     }
 
-    fn get_assignment_by_id(tx: &mut TransactionHandler) {
+    fn get_assignment_by_id(tx: &mut DbHandle) {
       let group = tx.create_group("test-group", None)?;
       let user = tx.create_user("username", "email", "password", None)?;
       let repo = tx.create_repository("test-repo", &Repotype::Default, user.id, None)?;
@@ -397,7 +397,7 @@ mod tests {
       assert_eq!(assignment.correction_repo_id, None);
     }
 
-    fn get_assignment_group(tx: &mut TransactionHandler) {
+    fn get_assignment_group(tx: &mut DbHandle) {
       let group = tx.create_group("test-group", None)?;
       let user = tx.create_user("username", "email", "password", None)?;
       let repo = tx.create_repository("test-repo", &Repotype::Default, user.id, None)?;
@@ -408,7 +408,7 @@ mod tests {
       assert_eq!(group.name, "test-group");
     }
 
-    fn get_assignment_base_repo(tx: &mut TransactionHandler) {
+    fn get_assignment_base_repo(tx: &mut DbHandle) {
       let group = tx.create_group("test-group", None)?;
       let user = tx.create_user("username", "email", "password", None)?;
       let repo = tx.create_repository("test-repo", &Repotype::Default, user.id, None)?;
@@ -418,7 +418,7 @@ mod tests {
       assert_eq!(repo.id, repo.id);
     }
 
-    fn get_assignment_test_repo(tx: &mut TransactionHandler) {
+    fn get_assignment_test_repo(tx: &mut DbHandle) {
       let group = tx.create_group("test-group", None)?;
       let user = tx.create_user("username", "email", "password", None)?;
       let base_repo = tx.create_repository("base-repo", &Repotype::Default, user.id, None)?;
@@ -429,7 +429,7 @@ mod tests {
       assert_eq!(repo.id, repo.id);
     }
 
-    fn get_assignment_correction_repo(tx: &mut TransactionHandler) {
+    fn get_assignment_correction_repo(tx: &mut DbHandle) {
       let group = tx.create_group("test-group", None)?;
       let user = tx.create_user("username", "email", "password", None)?;
       let base_repo = tx.create_repository("base-repo", &Repotype::Default, user.id, None)?;
@@ -440,7 +440,7 @@ mod tests {
       assert_eq!(repo.id, repo.id);
     }
 
-    fn get_assignment_submission_repos(tx: &mut TransactionHandler) {
+    fn get_assignment_submission_repos(tx: &mut DbHandle) {
       let group = tx.create_group("test-group", None)?;
       let user = tx.create_user("username", "email", "password", None)?;
       let base_repo = tx.create_repository("base-repo", &Repotype::Default, user.id, None)?;
@@ -459,7 +459,7 @@ mod tests {
       assert_eq!(submission_repos.len(), repos.len());
     }
 
-    fn delete_assignment(tx: &mut TransactionHandler) {
+    fn delete_assignment(tx: &mut DbHandle) {
       let group = tx.create_group("test-group", None)?;
       let user = tx.create_user("username", "email", "password", None)?;
       let repo = tx.create_repository("test-repo", &Repotype::Default, user.id, None)?;

@@ -4,7 +4,7 @@ use diesel::{
 };
 use diesel_derive_enum::DbEnum;
 
-use crate::{error::DatabaseError, TransactionHandler};
+use crate::{error::DatabaseError, DbHandle};
 
 #[derive(Debug, DbEnum, PartialEq, Eq)]
 #[ExistingTypePath = "crate::schema::sql_types::Status"]
@@ -34,7 +34,7 @@ pub struct NewCirun<'a> {
   pub status: &'a Status,
 }
 
-pub trait CirunTransactionHandler {
+pub trait CirunDbHandle {
   fn create_cirun(&mut self, repository_id: i32, commit: &str) -> Result<Cirun, DatabaseError>;
 
   fn create_cirun_with_status(
@@ -58,7 +58,7 @@ pub trait CirunTransactionHandler {
     -> Result<Cirun, DatabaseError>;
 }
 
-impl<'a> CirunTransactionHandler for TransactionHandler<'a> {
+impl CirunDbHandle for DbHandle {
   fn create_cirun(&mut self, repository_id: i32, commit: &str) -> Result<Cirun, DatabaseError> {
     self.create_cirun_with_status(repository_id, commit, &Status::Pending)
   }
@@ -80,7 +80,7 @@ impl<'a> CirunTransactionHandler for TransactionHandler<'a> {
     diesel::insert_into(cirun::table)
       .values(&new_cirun)
       .returning(Cirun::as_returning())
-      .get_result(self.conn)
+      .get_result(&mut self.conn)
       .map_err(DatabaseError::from)
   }
 
@@ -90,7 +90,7 @@ impl<'a> CirunTransactionHandler for TransactionHandler<'a> {
     let cirun = dsl::cirun
       .filter(dsl::id.eq(cirun_id))
       .select(Cirun::as_select())
-      .first(self.conn)
+      .first(&mut self.conn)
       .optional();
     match cirun {
       Ok(cirun) => Ok(cirun),
@@ -109,7 +109,7 @@ impl<'a> CirunTransactionHandler for TransactionHandler<'a> {
       .filter(dsl::repository_id.eq(repository_id))
       .filter(dsl::commit.eq(commit))
       .select(Cirun::as_select())
-      .first(self.conn)
+      .first(&mut self.conn)
       .optional();
     match cirun {
       Ok(cirun) => Ok(cirun),
@@ -124,7 +124,7 @@ impl<'a> CirunTransactionHandler for TransactionHandler<'a> {
     dsl::cirun
       .filter(dsl::repository_id.eq(repository_id))
       .select(Cirun::as_select())
-      .load(self.conn)
+      .load(&mut self.conn)
       .map_err(DatabaseError::from)
   }
 
@@ -138,7 +138,7 @@ impl<'a> CirunTransactionHandler for TransactionHandler<'a> {
     diesel::update(dsl::cirun.filter(dsl::id.eq(cirun_id)))
       .set(dsl::status.eq(status))
       .returning(Cirun::as_returning())
-      .get_result(self.conn)
+      .get_result(&mut self.conn)
       .map_err(DatabaseError::from)
   }
 }
@@ -147,16 +147,16 @@ impl<'a> CirunTransactionHandler for TransactionHandler<'a> {
 mod tests {
   use crate::{
     db_handle::{
-      repository::{RepositoryTransactionHandler, Repotype},
-      user::UserTransactionHandler,
+      repository::{RepositoryDbHandle, Repotype},
+      user::UserDbHandle,
     },
     transaction_tests,
   };
 
-  use super::CirunTransactionHandler;
+  use super::CirunDbHandle;
 
   transaction_tests! {
-    fn create_cirun(tx: &mut TransactionHandler) {
+    fn create_cirun(tx: &mut DbHandle) {
       let user = tx.create_user("user", "email", "password", None)?;
       let repo = tx.create_repository("name", &Repotype::Default, user.id, None)?;
       let cirun = tx.create_cirun(repo.id, "commit")?;
@@ -165,12 +165,12 @@ mod tests {
       assert_eq!(cirun.status, crate::db_handle::cirun::Status::Pending);
     }
 
-    fn create_cirun_invalid_repo_fails(tx: &mut TransactionHandler) {
+    fn create_cirun_invalid_repo_fails(tx: &mut DbHandle) {
       let cirun = tx.create_cirun(1, "commit");
       assert!(cirun.is_err());
     }
 
-    fn create_cirun_with_status(tx: &mut TransactionHandler) {
+    fn create_cirun_with_status(tx: &mut DbHandle) {
       let user = tx.create_user("user", "email", "password", None)?;
       let repo = tx.create_repository("name", &Repotype::Default, user.id, None)?;
       let cirun = tx.create_cirun_with_status(repo.id, "commit", &crate::db_handle::cirun::Status::Success)?;
@@ -179,7 +179,7 @@ mod tests {
       assert_eq!(cirun.status, crate::db_handle::cirun::Status::Success);
     }
 
-    fn get_cirun_by_id(tx: &mut TransactionHandler) {
+    fn get_cirun_by_id(tx: &mut DbHandle) {
       let user = tx.create_user("user", "email", "password", None)?;
       let repo = tx.create_repository("name", &Repotype::Default, user.id, None)?;
       let cirun = tx.create_cirun(repo.id, "commit")?;
@@ -189,12 +189,12 @@ mod tests {
       assert_eq!(found_cirun.status, crate::db_handle::cirun::Status::Pending);
     }
 
-    fn get_nonexistent_cirun_by_id(tx: &mut TransactionHandler) {
+    fn get_nonexistent_cirun_by_id(tx: &mut DbHandle) {
       let cirun = tx.get_cirun_by_id(1)?;
       assert!(cirun.is_none());
     }
 
-    fn get_cirun_by_commit(tx: &mut TransactionHandler) {
+    fn get_cirun_by_commit(tx: &mut DbHandle) {
       let user = tx.create_user("user", "email", "password", None)?;
       let repo = tx.create_repository("name", &Repotype::Default, user.id, None)?;
       tx.create_cirun(repo.id, "commit")?;
@@ -204,19 +204,19 @@ mod tests {
       assert_eq!(found_cirun.status, crate::db_handle::cirun::Status::Pending);
     }
 
-    fn get_nonexistent_repo_cirun_by_commit(tx: &mut TransactionHandler) {
+    fn get_nonexistent_repo_cirun_by_commit(tx: &mut DbHandle) {
       let cirun = tx.get_cirun_by_commit(1, "commit")?;
       assert!(cirun.is_none());
     }
 
-    fn get_cirun_by_nonexistent_commit(tx: &mut TransactionHandler) {
+    fn get_cirun_by_nonexistent_commit(tx: &mut DbHandle) {
       let user = tx.create_user("user", "email", "password", None)?;
       let repo = tx.create_repository("name", &Repotype::Default, user.id, None)?;
       let cirun = tx.get_cirun_by_commit(repo.id, "commit")?;
       assert!(cirun.is_none());
     }
 
-    fn list_repository_ciruns(tx: &mut TransactionHandler) {
+    fn list_repository_ciruns(tx: &mut DbHandle) {
       let user = tx.create_user("user", "email", "password", None)?;
       let repo = tx.create_repository("name", &Repotype::Default, user.id, None)?;
       let commits = vec![
@@ -231,7 +231,7 @@ mod tests {
       assert_eq!(ciruns.len(), commits.len());
     }
 
-    fn update_cirun_status(tx: &mut TransactionHandler) {
+    fn update_cirun_status(tx: &mut DbHandle) {
       let user = tx.create_user("user", "email", "password", None)?;
       let repo = tx.create_repository("name", &Repotype::Default, user.id, None)?;
       let cirun = tx.create_cirun(repo.id, "commit")?;
@@ -240,7 +240,7 @@ mod tests {
       assert_eq!(updated_cirun.status, crate::db_handle::cirun::Status::Success);
     }
 
-    fn update_nonexistent_cirun_status_fails(tx: &mut TransactionHandler) {
+    fn update_nonexistent_cirun_status_fails(tx: &mut DbHandle) {
       let status = tx.update_cirun_status(1, &crate::db_handle::cirun::Status::Success);
       assert!(status.is_err());
     }
