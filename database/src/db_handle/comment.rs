@@ -4,7 +4,7 @@ use diesel::{
 };
 use diesel_derive_enum::DbEnum;
 
-use crate::{error::DatabaseError, TransactionHandler};
+use crate::{error::DatabaseError, DbHandle};
 
 #[derive(Debug, DbEnum, PartialEq, Eq)]
 #[ExistingTypePath = "crate::schema::sql_types::Commentauthor"]
@@ -46,7 +46,7 @@ pub struct NewComment<'a> {
   pub date: &'a std::time::SystemTime,
 }
 
-pub trait CommentTransactionHandler {
+pub trait CommentDbHandle {
   fn add_comment(
     &mut self,
     repository_id: i32,
@@ -99,18 +99,18 @@ pub trait CommentTransactionHandler {
   fn delete_comment(&mut self, comment_id: i32) -> Result<(), DatabaseError>;
 }
 
-impl<'a> TransactionHandler<'a> {
+impl DbHandle {
   fn add_comment_inner(&mut self, new_comment: NewComment) -> Result<Comment, DatabaseError> {
     use crate::schema::comments;
 
     diesel::insert_into(comments::table)
       .values(&new_comment)
-      .get_result(self.conn)
+      .get_result(&mut self.conn)
       .map_err(DatabaseError::from)
   }
 }
 
-impl<'a> CommentTransactionHandler for TransactionHandler<'a> {
+impl CommentDbHandle for DbHandle {
   fn add_comment(
     &mut self,
     repository_id: i32,
@@ -224,7 +224,7 @@ impl<'a> CommentTransactionHandler for TransactionHandler<'a> {
     dsl::comments
       .filter(dsl::id.eq(comment_id))
       .select(Comment::as_select())
-      .first(self.conn)
+      .first(&mut self.conn)
       .optional()
       .map_err(DatabaseError::from)
   }
@@ -240,7 +240,7 @@ impl<'a> CommentTransactionHandler for TransactionHandler<'a> {
       .filter(dsl::repository_id.eq(repository_id))
       .filter(dsl::commit_hash.eq(commit_hash))
       .select(Comment::as_select())
-      .load(self.conn)
+      .load(&mut self.conn)
       .map_err(DatabaseError::from)
   }
 
@@ -250,7 +250,7 @@ impl<'a> CommentTransactionHandler for TransactionHandler<'a> {
     dsl::comments
       .filter(dsl::respond_to.eq(comment_id))
       .select(Comment::as_select())
-      .load(self.conn)
+      .load(&mut self.conn)
       .map_err(DatabaseError::from)
   }
 
@@ -258,7 +258,7 @@ impl<'a> CommentTransactionHandler for TransactionHandler<'a> {
     use crate::schema::comments::dsl::*;
 
     diesel::delete(comments.find(comment_id))
-      .execute(self.conn)
+      .execute(&mut self.conn)
       .map(|_| ())
       .map_err(DatabaseError::from)
   }
@@ -268,29 +268,29 @@ impl<'a> CommentTransactionHandler for TransactionHandler<'a> {
 mod tests {
   use crate::{
     db_handle::{
-      repository::{RepositoryTransactionHandler, Repotype},
-      user::UserTransactionHandler,
+      repository::{RepositoryDbHandle, Repotype},
+      user::UserDbHandle,
     },
     transaction_tests,
   };
 
-  use super::{CommentTransactionHandler, Commentauthor};
+  use super::{CommentDbHandle, Commentauthor};
 
   transaction_tests! {
-    fn add_comment_missing_repository(tx: &mut TransactionHandler) {
+    fn add_comment_missing_repository(tx: &mut DbHandle) {
       let user = tx.create_user("username", "email", "password", None)?;
       let result = tx.add_comment(0, "commit", user.id, "message");
       result.expect_err("Expected error when adding comment to nonexistent repository");
     }
 
-    fn add_comment_missing_author(tx: &mut TransactionHandler) {
+    fn add_comment_missing_author(tx: &mut DbHandle) {
       let user = tx.create_user("username", "email", "password", None)?;
       let repository = tx.create_repository("repo", &Repotype::Default, user.id, None)?;
       let result = tx.add_comment(repository.id, "commit", 0, "message");
       result.expect_err("Expected error when adding comment with nonexistent author");
     }
 
-    fn add_comment_success(tx: &mut TransactionHandler) {
+    fn add_comment_success(tx: &mut DbHandle) {
       let user = tx.create_user("username", "email", "password", None)?;
       let repository = tx.create_repository("repo", &Repotype::Default, user.id, None)?;
       let comment = tx.add_comment(repository.id, "commit", user.id, "message")?;
@@ -301,7 +301,7 @@ mod tests {
       assert_eq!(comment.author_type, Commentauthor::User);
     }
 
-    fn add_file_comment_success(tx: &mut TransactionHandler) {
+    fn add_file_comment_success(tx: &mut DbHandle) {
       let user = tx.create_user("username", "email", "password", None)?;
       let repository = tx.create_repository("repo", &Repotype::Default, user.id, None)?;
       let comment = tx.add_file_comment(repository.id, "commit", "file", user.id, "message")?;
@@ -313,7 +313,7 @@ mod tests {
       assert_eq!(comment.file_path, Some("file".to_string()));
     }
 
-    fn add_ci_comment_success(tx: &mut TransactionHandler) {
+    fn add_ci_comment_success(tx: &mut DbHandle) {
       let user = tx.create_user("username", "email", "password", None)?;
       let repository = tx.create_repository("repo", &Repotype::Default, user.id, None)?;
       let comment = tx.add_ci_comment(repository.id, "commit", "message")?;
@@ -324,7 +324,7 @@ mod tests {
       assert_eq!(comment.author_type, Commentauthor::Automated);
     }
 
-    fn add_ci_file_comment_success(tx: &mut TransactionHandler) {
+    fn add_ci_file_comment_success(tx: &mut DbHandle) {
       let user = tx.create_user("username", "email", "password", None)?;
       let repository = tx.create_repository("repo", &Repotype::Default, user.id, None)?;
       let comment = tx.add_ci_file_comment(repository.id, "commit", "file#42-43", "message")?;
@@ -336,13 +336,13 @@ mod tests {
       assert_eq!(comment.file_path, Some("file#42-43".to_string()));
     }
 
-    fn add_response_comment_missing_reply_to(tx: &mut TransactionHandler) {
+    fn add_response_comment_missing_reply_to(tx: &mut DbHandle) {
       let user = tx.create_user("username", "email", "password", None)?;
       let result = tx.add_response_comment(0, user.id, "message");
       result.expect_err("Expected error when adding response comment to nonexistent comment");
     }
 
-    fn add_response_comment_missing_author(tx: &mut TransactionHandler) {
+    fn add_response_comment_missing_author(tx: &mut DbHandle) {
       let user = tx.create_user("username", "email", "password", None)?;
       let repository = tx.create_repository("repo", &Repotype::Default, user.id, None)?;
       let comment = tx.add_comment(repository.id, "commit", user.id, "message")?;
@@ -350,7 +350,7 @@ mod tests {
       result.expect_err("Expected error when adding response comment with nonexistent author");
     }
 
-    fn add_response_comment_success(tx: &mut TransactionHandler) {
+    fn add_response_comment_success(tx: &mut DbHandle) {
       let user = tx.create_user("username", "email", "password", None)?;
       let repository = tx.create_repository("repo", &Repotype::Default, user.id, None)?;
       let comment = tx.add_comment(repository.id, "commit", user.id, "message")?;
@@ -361,7 +361,7 @@ mod tests {
       assert_eq!(response.author_type, Commentauthor::User);
     }
 
-    fn listed_comments_include_responses(tx: &mut TransactionHandler) {
+    fn listed_comments_include_responses(tx: &mut DbHandle) {
       let user = tx.create_user("username", "email", "password", None)?;
       let repository = tx.create_repository("repo", &Repotype::Default, user.id, None)?;
       let comment = tx.add_comment(repository.id, "commit", user.id, "message")?;
@@ -372,12 +372,12 @@ mod tests {
       assert_eq!(comments.len(), 4);
     }
 
-    fn get_comment_by_id_missing_comment(tx: &mut TransactionHandler) {
+    fn get_comment_by_id_missing_comment(tx: &mut DbHandle) {
       let comment = tx.get_comment_by_id(0)?;
       assert!(comment.is_none());
     }
 
-    fn get_comment_by_id_success(tx: &mut TransactionHandler) {
+    fn get_comment_by_id_success(tx: &mut DbHandle) {
       let user = tx.create_user("username", "email", "password", None)?;
       let repository = tx.create_repository("repo", &Repotype::Default, user.id, None)?;
       let comment = tx.add_comment(repository.id, "commit", user.id, "message")?;
@@ -390,14 +390,14 @@ mod tests {
       assert_eq!(found_comment.author_type, Commentauthor::User);
     }
 
-    fn list_commit_comments_empty(tx: &mut TransactionHandler) {
+    fn list_commit_comments_empty(tx: &mut DbHandle) {
       let user = tx.create_user("username", "email", "password", None)?;
       let repository = tx.create_repository("repo", &Repotype::Default, user.id, None)?;
       let comments = tx.list_commit_comments(repository.id, "commit")?;
       assert!(comments.is_empty());
     }
 
-    fn list_commit_comments_success(tx: &mut TransactionHandler) {
+    fn list_commit_comments_success(tx: &mut DbHandle) {
       let user = tx.create_user("username", "email", "password", None)?;
       let repository = tx.create_repository("repo", &Repotype::Default, user.id, None)?;
       let comment = tx.add_comment(repository.id, "commit", user.id, "message")?;
@@ -411,7 +411,7 @@ mod tests {
       assert_eq!(comments[0].author_type, Commentauthor::User);
     }
 
-    fn list_commit_comments_multiple_success(tx: &mut TransactionHandler) {
+    fn list_commit_comments_multiple_success(tx: &mut DbHandle) {
       let user = tx.create_user("username", "email", "password", None)?;
       let repository = tx.create_repository("repo", &Repotype::Default, user.id, None)?;
       let comment = tx.add_comment(repository.id, "commit", user.id, "message")?;
@@ -423,12 +423,12 @@ mod tests {
       assert_eq!(comments.len(), 4);
     }
 
-    fn list_response_nonexistent_comments_empty(tx: &mut TransactionHandler) {
+    fn list_response_nonexistent_comments_empty(tx: &mut DbHandle) {
       let comments = tx.list_response_comments(0)?;
       assert!(comments.is_empty());
     }
 
-    fn list_response_comments_success(tx: &mut TransactionHandler) {
+    fn list_response_comments_success(tx: &mut DbHandle) {
       let user = tx.create_user("username", "email", "password", None)?;
       let repository = tx.create_repository("repo", &Repotype::Default, user.id, None)?;
       let comment = tx.add_comment(repository.id, "commit", user.id, "message")?;
@@ -443,12 +443,12 @@ mod tests {
       assert_eq!(comments[0].author_type, Commentauthor::User);
     }
 
-    fn delete_comment_missing_comment(tx: &mut TransactionHandler) {
+    fn delete_comment_missing_comment(tx: &mut DbHandle) {
       let result = tx.delete_comment(0);
       result.expect("Expected nothing to happen when deleting nonexistent comment");
     }
 
-    fn delete_comment_success(tx: &mut TransactionHandler) {
+    fn delete_comment_success(tx: &mut DbHandle) {
       let user = tx.create_user("username", "email", "password", None)?;
       let repository = tx.create_repository("repo", &Repotype::Default, user.id, None)?;
       let comment = tx.add_comment(repository.id, "commit", user.id, "message")?;

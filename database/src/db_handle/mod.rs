@@ -18,14 +18,14 @@ pub struct DbHandle {
 }
 
 impl DbHandle {
-  pub fn new(database_url: String) -> Result<DbHandle, DatabaseError> {
-    let conn = PgConnection::establish(&database_url)?;
+  pub fn new(database_url: &str) -> Result<DbHandle, DatabaseError> {
+    let conn = PgConnection::establish(database_url)?;
     Ok(DbHandle { conn })
   }
 
   pub fn new_from_env() -> Result<DbHandle, DatabaseError> {
     let database_url = std::env::var("DATABASE_URL")?;
-    DbHandle::new(database_url)
+    DbHandle::new(&database_url)
   }
 
   pub fn run_migrations(&mut self) -> Result<Vec<MigrationVersion>, DatabaseError> {
@@ -36,18 +36,4 @@ impl DbHandle {
       .run_pending_migrations(MIGRATIONS)
       .map_err(|_| DatabaseError::MigrationError)
   }
-
-  pub fn transaction<T, E, F>(&mut self, f: F) -> Result<T, E>
-  where
-    F: FnOnce(&mut TransactionHandler) -> Result<T, E>,
-    E: From<diesel::result::Error>,
-  {
-    self
-      .conn
-      .transaction(|conn| f(&mut TransactionHandler { conn }))
-  }
-}
-
-pub struct TransactionHandler<'a> {
-  conn: &'a mut PgConnection,
 }

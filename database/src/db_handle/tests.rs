@@ -1,52 +1,43 @@
-use std::sync::{Mutex, MutexGuard};
-
-use crate::{error::DatabaseError, DbHandle};
+use crate::DbHandle;
 
 #[rstest::fixture]
 #[once]
-fn db_handle_mux() -> Mutex<DbHandle> {
+fn connection_string() -> String {
   dotenv::dotenv().ok();
-
   let database_url = std::env::var("DATABASE_URL").unwrap();
-  let mut handle = DbHandle::new(database_url).unwrap();
+
+  // Run migrations once
+  let mut handle = DbHandle::new(&database_url).unwrap();
 
   handle.run_migrations().expect("Error running migrations");
+  drop(handle);
 
-  Mutex::new(handle)
+  database_url
 }
-
-pub type DbHandleGuard<'a> = MutexGuard<'a, DbHandle>;
 
 #[rstest::fixture]
-pub fn db_handle<'a>(db_handle_mux: &'a Mutex<DbHandle>) -> DbHandleGuard<'a> {
-  db_handle_mux.lock().unwrap()
-}
-
-#[derive(thiserror::Error, Debug, PartialEq)]
-pub enum TestError {
-  #[error("Expected")]
-  Expected,
-  #[error("Unexpected diesel error: {0}")]
-  UnexpectedDiesel(#[from] diesel::result::Error),
-  #[error("Unexpected wrapper error: {0}")]
-  UnexpectedWrapper(#[from] DatabaseError),
+pub fn db_handle(connection_string: &str) -> DbHandle {
+  DbHandle::new(&connection_string).expect("Error creating DbHandle")
 }
 
 #[macro_export]
 macro_rules! transaction_tests {
-  {$(fn $name:ident($tx:ident : &mut TransactionHandler) { $($body:tt)* })*} => {
-    use crate::db_handle::tests::{DbHandleGuard, TestError, db_handle};
+  {$(fn $name:ident($tx:ident : &mut DbHandle) { $($body:tt)* })*} => {
+    use crate::db_handle::{DbHandle, tests::{db_handle}};
+    use diesel::Connection;
     $(
       #[rstest::rstest]
-      fn $name(mut db_handle: DbHandleGuard) {
-        let err: Result<(), TestError> = db_handle.transaction(|$tx| {
-          $($body)*
-          Err(TestError::Expected)
-        });
+      fn $name(db_handle: DbHandle) {
+        let mut $tx = db_handle;
+        $tx.conn.begin_test_transaction().expect("Error beginning test transaction");
 
-        assert!(err.is_err(), "Test modified database without reverting! Tests shouldn't return any values!");
-        let err = err.unwrap_err();
-        assert!(matches!(err, TestError::Expected), "{:?}", err);
+        let mut f = move || {
+          $($body)*
+          Result::<(), crate::error::DatabaseError>::Ok(())
+        };
+
+        let err = f();
+        err.expect("Unexpected error in test transaction");
       }
     )*
   };

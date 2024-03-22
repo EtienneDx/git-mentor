@@ -6,7 +6,7 @@ use diesel::{
 use crate::{
   error::DatabaseError,
   schema::{assignments, group_students, groups},
-  TransactionHandler,
+  DbHandle,
 };
 
 use super::{assignment::Assignment, user::User};
@@ -44,7 +44,7 @@ pub struct NewGroupStudent {
   pub student_id: i32,
 }
 
-pub trait GroupTransactionHandler {
+pub trait GroupDbHandle {
   fn create_group(&mut self, name: &str, teacher_id: Option<i32>) -> Result<Group, DatabaseError>;
 
   fn get_group_by_id(&mut self, group_id: i32) -> Result<Option<Group>, DatabaseError>;
@@ -63,7 +63,7 @@ pub trait GroupTransactionHandler {
   fn delete_group(&mut self, group_id: i32) -> bool;
 }
 
-impl<'a> GroupTransactionHandler for TransactionHandler<'a> {
+impl GroupDbHandle for DbHandle {
   fn create_group(&mut self, name: &str, teacher_id: Option<i32>) -> Result<Group, DatabaseError> {
     let new_group = NewGroup {
       teacher_id,
@@ -73,7 +73,7 @@ impl<'a> GroupTransactionHandler for TransactionHandler<'a> {
     diesel::insert_into(groups::table)
       .values(&new_group)
       .returning(Group::as_returning())
-      .get_result(self.conn)
+      .get_result(&mut self.conn)
       .map_err(DatabaseError::from)
   }
 
@@ -83,7 +83,7 @@ impl<'a> GroupTransactionHandler for TransactionHandler<'a> {
     groups::table
       .filter(dsl::id.eq(group_id))
       .select(Group::as_select())
-      .first(self.conn)
+      .first(&mut self.conn)
       .optional()
       .map_err(DatabaseError::from)
   }
@@ -95,7 +95,7 @@ impl<'a> GroupTransactionHandler for TransactionHandler<'a> {
       .filter(dsl::id.eq(group_id))
       .inner_join(crate::schema::users::table)
       .select(crate::schema::users::all_columns)
-      .first(self.conn);
+      .first(&mut self.conn);
 
     match res {
       Ok(user) => Ok(Some(user)),
@@ -114,7 +114,7 @@ impl<'a> GroupTransactionHandler for TransactionHandler<'a> {
     diesel::update(groups::table.filter(dsl::id.eq(group_id)))
       .set(dsl::teacher_id.eq(teacher_id))
       .returning(Group::as_returning())
-      .get_result(self.conn)
+      .get_result(&mut self.conn)
       .map_err(DatabaseError::from)
   }
 
@@ -124,7 +124,7 @@ impl<'a> GroupTransactionHandler for TransactionHandler<'a> {
     assignments::table
       .filter(dsl::group_id.eq(group_id))
       .select(Assignment::as_select())
-      .load(self.conn)
+      .load(&mut self.conn)
       .map_err(DatabaseError::from)
   }
 
@@ -136,7 +136,7 @@ impl<'a> GroupTransactionHandler for TransactionHandler<'a> {
 
     diesel::insert_into(group_students::table)
       .values(&new_group_student)
-      .execute(self.conn)
+      .execute(&mut self.conn)
       .map_err(DatabaseError::from)?;
 
     Ok(())
@@ -149,7 +149,7 @@ impl<'a> GroupTransactionHandler for TransactionHandler<'a> {
       .filter(dsl::group_id.eq(group_id))
       .inner_join(crate::schema::users::table)
       .select(crate::schema::users::all_columns)
-      .load(self.conn)
+      .load(&mut self.conn)
       .map_err(DatabaseError::from)
   }
 
@@ -157,7 +157,7 @@ impl<'a> GroupTransactionHandler for TransactionHandler<'a> {
     use crate::schema::groups::dsl;
 
     diesel::delete(groups::table.filter(dsl::id.eq(group_id)))
-      .execute(self.conn)
+      .execute(&mut self.conn)
       .is_ok()
   }
 }
@@ -166,34 +166,34 @@ impl<'a> GroupTransactionHandler for TransactionHandler<'a> {
 mod tests {
   use crate::{
     db_handle::{
-      assignment::AssignmentTransactionHandler,
-      group::GroupTransactionHandler,
-      repository::{RepositoryTransactionHandler, Repotype},
-      user::UserTransactionHandler,
+      assignment::AssignmentDbHandle,
+      group::GroupDbHandle,
+      repository::{RepositoryDbHandle, Repotype},
+      user::UserDbHandle,
     },
     transaction_tests,
   };
 
   transaction_tests! {
-    fn create_group(tx: &mut TransactionHandler) {
+    fn create_group(tx: &mut DbHandle) {
       let group = tx.create_group("test_group", None)?;
       assert_eq!(group.name, "test_group");
       assert_eq!(group.teacher_id, None);
     }
 
-    fn create_group_with_teacher(tx: &mut TransactionHandler) {
+    fn create_group_with_teacher(tx: &mut DbHandle) {
       let teacher = tx.create_user("teacher", "email", "password", None)?;
       let group = tx.create_group("test_group", Some(teacher.id))?;
       assert_eq!(group.name, "test_group");
       assert_eq!(group.teacher_id, Some(teacher.id));
     }
 
-    fn create_group_nonexistent_teacher_fails(tx: &mut TransactionHandler) {
+    fn create_group_nonexistent_teacher_fails(tx: &mut DbHandle) {
       let group = tx.create_group("test_group", Some(1));
       assert!(group.is_err());
     }
 
-    fn get_group_by_id(tx: &mut TransactionHandler) {
+    fn get_group_by_id(tx: &mut DbHandle) {
       let group = tx.create_group("test_group", None)?;
       let group = tx.get_group_by_id(group.id)?;
       let group = group.expect("Group not found");
@@ -201,12 +201,12 @@ mod tests {
       assert_eq!(group.teacher_id, None);
     }
 
-    fn get_group_by_id_nonexistent_group(tx: &mut TransactionHandler) {
+    fn get_group_by_id_nonexistent_group(tx: &mut DbHandle) {
       let group = tx.get_group_by_id(1)?;
       assert!(group.is_none());
     }
 
-    fn get_teacher(tx: &mut TransactionHandler) {
+    fn get_teacher(tx: &mut DbHandle) {
       let teacher = tx.create_user("teacher", "email", "password", None)?;
       let group = tx.create_group("test_group", Some(teacher.id))?;
       let teacher = tx.get_teacher(group.id)?;
@@ -214,32 +214,32 @@ mod tests {
       assert_eq!(teacher.id, teacher.id);
     }
 
-    fn get_teacher_nonexistent_group(tx: &mut TransactionHandler) {
+    fn get_teacher_nonexistent_group(tx: &mut DbHandle) {
       let teacher = tx.get_teacher(1)?;
       assert!(teacher.is_none());
     }
 
-    fn set_teacher(tx: &mut TransactionHandler) {
+    fn set_teacher(tx: &mut DbHandle) {
       let teacher = tx.create_user("teacher", "email", "password", None)?;
       let group = tx.create_group("test_group", None)?;
       let group = tx.set_teacher(group.id, Some(teacher.id))?;
       assert_eq!(group.teacher_id, Some(teacher.id));
     }
 
-    fn set_teacher_nonexistent_group_fails(tx: &mut TransactionHandler) {
+    fn set_teacher_nonexistent_group_fails(tx: &mut DbHandle) {
       let teacher = tx.create_user("teacher", "email", "password", None)?;
       let group = tx.set_teacher(1, Some(teacher.id));
       assert!(group.is_err());
     }
 
-    fn unset_teacher(tx: &mut TransactionHandler) {
+    fn unset_teacher(tx: &mut DbHandle) {
       let teacher = tx.create_user("teacher", "email", "password", None)?;
       let group = tx.create_group("test_group", Some(teacher.id))?;
       let group = tx.set_teacher(group.id, None)?;
       assert_eq!(group.teacher_id, None);
     }
 
-    fn list_group_assignments(tx: &mut TransactionHandler) {
+    fn list_group_assignments(tx: &mut DbHandle) {
       let user = tx.create_user("user", "email", "password", None)?;
       let group = tx.create_group("test_group", None)?;
       let assignments = vec![
@@ -258,7 +258,7 @@ mod tests {
       assert_eq!(assignments.len(), 3);
     }
 
-    fn add_student(tx: &mut TransactionHandler) {
+    fn add_student(tx: &mut DbHandle) {
       let student = tx.create_user("student", "email", "password", None)?;
       let group = tx.create_group("test_group", None)?;
       tx.add_student(group.id, student.id)?;
@@ -267,13 +267,13 @@ mod tests {
       assert_eq!(students[0].id, student.id);
     }
 
-    fn add_student_nonexistent_group_fails(tx: &mut TransactionHandler) {
+    fn add_student_nonexistent_group_fails(tx: &mut DbHandle) {
       let student = tx.create_user("student", "email", "password", None)?;
       let group = tx.add_student(1, student.id);
       assert!(group.is_err());
     }
 
-    fn list_students(tx: &mut TransactionHandler) {
+    fn list_students(tx: &mut DbHandle) {
       let students = vec![
         ("student-1", "email-1", "password-1"),
         ("student-2", "email-2", "password-2"),
@@ -288,12 +288,12 @@ mod tests {
       assert_eq!(students.len(), 3);
     }
 
-    fn list_students_nonexistent_group(tx: &mut TransactionHandler) {
+    fn list_students_nonexistent_group(tx: &mut DbHandle) {
       let students = tx.list_students(1)?;
       assert!(students.is_empty());
     }
 
-    fn delete_group(tx: &mut TransactionHandler) {
+    fn delete_group(tx: &mut DbHandle) {
       let group = tx.create_group("test_group", None)?;
       let success = tx.delete_group(group.id);
       assert!(success, "Expected group to be deleted");
