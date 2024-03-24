@@ -7,4 +7,6 @@ edition = "2021"
 
 [dependencies]
 git-server = { path = "../git-server" }
+log = "0.4.21"
+password-auth = "1.0.0"
 ssh-server = { path = "../ssh-server" }
