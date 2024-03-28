@@ -16,11 +16,17 @@ code {
     monospace;
 }
 
-input {
+input[type="text"],
+input[type="password"],
+input[type="email"] {
   border: 1px solid #888;
   border-radius: 4px;
   padding: 5px;
   width: 100%;
+}
+
+input[type="checkbox"] {
+  margin: 0 5px;
 }
 
 button {

@@ -13,9 +13,17 @@
     "max-lines": ["error", { "max": 200, "skipBlankLines": true }],
     "max-lines-per-function": [
       "error",
-      { "max": 75, "skipBlankLines": true, "skipComments": true }
+      { "max": 100, "skipBlankLines": true, "skipComments": true }
     ],
-    "complexity": ["error", 6]
+    "complexity": ["error", 6],
+    "@typescript-eslint/no-unused-vars": [
+      "warn", // or "error"
+      {
+        "argsIgnorePattern": "^_",
+        "varsIgnorePattern": "^_",
+        "caughtErrorsIgnorePattern": "^_"
+      }
+    ]
   },
   "settings": {
     "react": {

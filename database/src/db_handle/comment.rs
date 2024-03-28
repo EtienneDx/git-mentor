@@ -99,6 +99,7 @@ pub trait CommentDbHandle {
   fn delete_comment(&mut self, comment_id: i32) -> Result<(), DatabaseError>;
 }
 
+#[cfg_attr(feature = "mock", faux::methods(path = "super"))]
 impl DbHandle {
   fn add_comment_inner(&mut self, new_comment: NewComment) -> Result<Comment, DatabaseError> {
     use crate::schema::comments;
@@ -110,6 +111,7 @@ impl DbHandle {
   }
 }
 
+#[cfg_attr(feature = "mock", faux::methods(path = "super"))]
 impl CommentDbHandle for DbHandle {
   fn add_comment(
     &mut self,

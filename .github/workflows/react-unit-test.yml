@@ -21,6 +21,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Build api to generates openapi types
+        run: cargo build
+        working-directory: gmt-api
+
+      - name: Make sdk
+        run: npx openapi --input ../gmt-api/openapi/main_service.json --output ./src/gmt-api --postfixServices "" --name "main_service"
+
       - name: Check linting
         run: npm run lint
 

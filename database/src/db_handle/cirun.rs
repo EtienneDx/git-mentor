@@ -58,6 +58,7 @@ pub trait CirunDbHandle {
     -> Result<Cirun, DatabaseError>;
 }
 
+#[cfg_attr(feature = "mock", faux::methods(path = "super"))]
 impl CirunDbHandle for DbHandle {
   fn create_cirun(&mut self, repository_id: i32, commit: &str) -> Result<Cirun, DatabaseError> {
     self.create_cirun_with_status(repository_id, commit, &Status::Pending)
