@@ -27,7 +27,7 @@ poem = { version = "1", features = ["test"] }
 rstest = "0.18.2"
 
 [build-dependencies]
-database = { path = "../database" }
+database = { path = "../database", features = ["mock"] }
 gmt-common = { path = "../gmt-common" }
 poem = "1"
 poem-openapi = "2"

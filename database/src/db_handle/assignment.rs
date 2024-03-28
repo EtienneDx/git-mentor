@@ -92,6 +92,7 @@ pub trait AssignmentDbHandle {
   fn delete_assignment(&mut self, assignment_id: i32) -> Result<bool, DatabaseError>;
 }
 
+#[cfg_attr(feature = "mock", faux::methods(path = "super"))]
 impl DbHandle {
   fn create_assignment_inner(
     &mut self,
@@ -115,6 +116,7 @@ impl DbHandle {
   }
 }
 
+#[cfg_attr(feature = "mock", faux::methods(path = "super"))]
 impl AssignmentDbHandle for DbHandle {
   fn create_assignment(
     &mut self,

@@ -13,10 +13,12 @@ pub mod group;
 pub mod repository;
 pub mod user;
 
+#[cfg_attr(feature = "mock", faux::create)]
 pub struct DbHandle {
   conn: PgConnection,
 }
 
+#[cfg_attr(feature = "mock", faux::methods)]
 impl DbHandle {
   pub fn new(database_url: &str) -> Result<DbHandle, DatabaseError> {
     let conn = PgConnection::establish(database_url)?;
@@ -35,5 +37,10 @@ impl DbHandle {
       .conn
       .run_pending_migrations(MIGRATIONS)
       .map_err(|_| DatabaseError::MigrationError)
+  }
+
+  #[cfg(test)]
+  pub fn begin_test_transaction(&mut self) -> diesel::QueryResult<()> {
+    self.conn.begin_test_transaction()
   }
 }

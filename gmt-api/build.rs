@@ -5,12 +5,13 @@ mod src {
 
 use std::sync::{Arc, Mutex};
 
+use database::db_handle::DbHandle;
 use src::services::make_service;
 
 fn main() {
   dotenv::dotenv().ok();
 
-  let db = database::DbHandle::new_from_env().expect("Failed to connect to database");
+  let db = DbHandle::faux();
   let db = Arc::new(Mutex::new(db));
   std::fs::create_dir_all("openapi").unwrap();
 

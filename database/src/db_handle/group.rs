@@ -63,6 +63,7 @@ pub trait GroupDbHandle {
   fn delete_group(&mut self, group_id: i32) -> bool;
 }
 
+#[cfg_attr(feature = "mock", faux::methods(path = "super"))]
 impl GroupDbHandle for DbHandle {
   fn create_group(&mut self, name: &str, teacher_id: Option<i32>) -> Result<Group, DatabaseError> {
     let new_group = NewGroup {

@@ -52,6 +52,7 @@ pub trait UserDbHandle {
   fn list_belongs_groups(&mut self, user_id: i32) -> Result<Vec<Group>, DatabaseError>;
 }
 
+#[cfg_attr(feature = "mock", faux::methods(path = "super"))]
 impl UserDbHandle for DbHandle {
   fn create_user(
     &mut self,

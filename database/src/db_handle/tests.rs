@@ -24,12 +24,11 @@ pub fn db_handle(connection_string: &str) -> DbHandle {
 macro_rules! transaction_tests {
   {$(fn $name:ident($tx:ident : &mut DbHandle) { $($body:tt)* })*} => {
     use crate::db_handle::{DbHandle, tests::{db_handle}};
-    use diesel::Connection;
     $(
       #[rstest::rstest]
       fn $name(db_handle: DbHandle) {
         let mut $tx = db_handle;
-        $tx.conn.begin_test_transaction().expect("Error beginning test transaction");
+        $tx.begin_test_transaction().expect("Error beginning test transaction");
 
         let mut f = move || {
           $($body)*
