@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [features]
-mock = ["dep:mockall", "dep:faux"]
+mock = ["dep:faux"]
 
 [dependencies]
 diesel = { version = "2.1.0", features = ["postgres"] }
@@ -14,7 +14,6 @@ chrono = "0.4.31"
 diesel_migrations = "2.1.0"
 thiserror = "1.0.57"
 diesel-derive-enum = { version = "2.1.0", features = ["postgres"] }
-mockall = { version = "0.12", optional = true }
 faux = { version = "^0.1", optional = true }
 
 [dev-dependencies]

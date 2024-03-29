@@ -23,12 +23,15 @@ sha2 = "0.10.8"
 dotenv = "0.15.0"
 
 [dev-dependencies]
+database = { path = "../database", features = ["mock"] }
+gmt-common = { path = "../gmt-common", features = ["mock"] }
 poem = { version = "1", features = ["test"] }
 rstest = "0.18.2"
+faux = "^0.1"
 
 [build-dependencies]
 database = { path = "../database", features = ["mock"] }
-gmt-common = { path = "../gmt-common" }
+gmt-common = { path = "../gmt-common", features = ["mock"] }
 poem = "1"
 poem-openapi = "2"
 tokio = { version = "1", features = ["full"] }

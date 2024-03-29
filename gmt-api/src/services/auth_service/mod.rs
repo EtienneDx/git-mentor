@@ -82,103 +82,18 @@ where
 #[cfg(test)]
 mod tests {
   use super::*;
-  use database::{
-    db_handle::user::{User, UserDbHandle},
-    error::DatabaseError,
-  };
-  use rstest::{fixture, rstest};
+  use database::{db_handle::user::User, DbHandle};
+  use gmt_common::password::PasswordAuthImpl;
+  use rstest::rstest;
 
-  struct MockDbHandle {
-    user: Option<User>,
-  }
-  impl UserDbHandle for MockDbHandle {
-    fn get_user_by_username(&mut self, username: &str) -> Result<Option<User>, DatabaseError> {
-      Ok(self.user.clone().filter(|x| x.username == username))
+  fn get_user() -> User {
+    User {
+      id: 1,
+      username: "test".to_string(),
+      password: PasswordAuthImpl::generate_hash("password"),
+      email: "email".to_string(),
+      pubkey: vec![],
     }
-
-    fn create_user(
-      &mut self,
-      username: &str,
-      email: &str,
-      password: &str,
-      pubkey: Option<Vec<&str>>,
-    ) -> Result<User, database::error::DatabaseError> {
-      Ok(User {
-        id: 1,
-        username: username.to_string(),
-        email: email.to_string(),
-        password: password.to_string(),
-        pubkey: pubkey
-          .unwrap_or_default()
-          .iter()
-          .map(|x| Some(x.to_string()))
-          .collect(),
-      })
-    }
-
-    fn get_user_by_id(
-      &mut self,
-      _user_id: i32,
-    ) -> Result<Option<User>, database::error::DatabaseError> {
-      Ok(self.user.clone().filter(|x| x.id == _user_id))
-    }
-
-    fn get_user_by_email(
-      &mut self,
-      _email: &str,
-    ) -> Result<Option<User>, database::error::DatabaseError> {
-      Ok(self.user.clone().filter(|x| x.email == _email))
-    }
-
-    fn insert_user_public_key(
-      &mut self,
-      _user_id: i32,
-      _pubkey: &str,
-    ) -> Result<(), database::error::DatabaseError> {
-      Ok(())
-    }
-
-    fn delete_user(&mut self, _user_id: i32) -> Result<(), database::error::DatabaseError> {
-      Ok(())
-    }
-
-    fn list_teaching_groups(
-      &mut self,
-      _user_id: i32,
-    ) -> Result<Vec<database::db_handle::group::Group>, database::error::DatabaseError> {
-      Ok(vec![])
-    }
-
-    fn list_belongs_groups(
-      &mut self,
-      _user_id: i32,
-    ) -> Result<Vec<database::db_handle::group::Group>, database::error::DatabaseError> {
-      Ok(vec![])
-    }
-  }
-
-  struct MockPasswordAuth;
-  impl PasswordAuth for MockPasswordAuth {
-    fn generate_hash(_password: impl AsRef<[u8]>) -> String {
-      "password".to_string()
-    }
-
-    fn verify_password(password: impl AsRef<[u8]>, hash: &str) -> bool {
-      password.as_ref() == hash.as_bytes()
-    }
-  }
-
-  #[fixture]
-  fn user_handle() -> Arc<Mutex<MockDbHandle>> {
-    Arc::new(Mutex::new(MockDbHandle {
-      user: Some(User {
-        id: 1,
-        username: "test".to_string(),
-        email: "email".to_string(),
-        password: "password".to_string(),
-        pubkey: vec![],
-      }),
-    }))
   }
 
   #[rstest]
@@ -186,35 +101,46 @@ mod tests {
     username: "test".to_string(),
     password: "password".to_string(),
   }),
+  Some(get_user()),
   Ok(()))]
   #[case(LoginRequest::EmailLogin(EmailLoginRequest {
     email: "email".to_string(),
     password: "password".to_string(),
   }),
+  Some(get_user()),
   Ok(()))]
   #[case(LoginRequest::UsernameLogin(UsernameLoginRequest {
     username: "wrong".to_string(),
     password: "password".to_string(),
   }),
+  None,
   Err(AuthenticationError::Unauthorized))]
   #[case(LoginRequest::EmailLogin(EmailLoginRequest {
     email: "wrong".to_string(),
     password: "password".to_string(),
   }),
+  None,
   Err(AuthenticationError::Unauthorized))]
   #[case(LoginRequest::UsernameLogin(UsernameLoginRequest {
     username: "test".to_string(),
     password: "wrong".to_string(),
   }),
+  Some(get_user()),
   Err(AuthenticationError::Unauthorized))]
   #[tokio::test]
   async fn test_login(
-    user_handle: Arc<Mutex<MockDbHandle>>,
     #[case] req: LoginRequest,
+    #[case] user: Option<User>,
     #[case] expected: Result<(), AuthenticationError>,
   ) {
-    let auth_service: AuthService<MockDbHandle, _> =
-      AuthService::<MockDbHandle, MockPasswordAuth>::new(user_handle);
+    let mut user_handle = DbHandle::faux();
+    let u = user.clone();
+    faux::when!(user_handle.get_user_by_username).then(move |_| Ok(user.clone()));
+    faux::when!(user_handle.get_user_by_email).then(move |_| Ok(u.clone()));
+
+    let user_handle = Arc::new(Mutex::new(user_handle));
+    let auth_service: AuthService<DbHandle, _> =
+      AuthService::<DbHandle, PasswordAuthImpl>::new(user_handle);
     let req = Json(req);
 
     let res = auth_service.login(req).await;
@@ -233,27 +159,40 @@ mod tests {
     email: "new".to_string(),
     password: "password".to_string(),
   },
+  None,
+  None,
   Ok(()))]
   #[case(SignUpRequest {
     username: "test".to_string(),
     email: "email".to_string(),
     password: "password".to_string(),
   },
+  Some(get_user()),
+  None,
   Err(AuthenticationError::Conflict("Username already exists".into())))]
   #[case(SignUpRequest {
     username: "new".to_string(),
     email: "email".to_string(),
     password: "password".to_string(),
   },
+  None,
+  Some(get_user()),
   Err(AuthenticationError::Conflict("Email already exists".into())))]
   #[tokio::test]
   async fn test_signup(
-    user_handle: Arc<Mutex<MockDbHandle>>,
     #[case] req: SignUpRequest,
+    #[case] username_user: Option<User>,
+    #[case] email_user: Option<User>,
     #[case] expected: Result<(), AuthenticationError>,
   ) {
-    let auth_service: AuthService<MockDbHandle, _> =
-      AuthService::<MockDbHandle, MockPasswordAuth>::new(user_handle);
+    let mut user_handle = DbHandle::faux();
+    faux::when!(user_handle.get_user_by_username).then(move |_| Ok(username_user.clone()));
+    faux::when!(user_handle.get_user_by_email).then(move |_| Ok(email_user.clone()));
+    faux::when!(user_handle.create_user).then(move |(_, _, _, _)| Ok(get_user()));
+
+    let user_handle = Arc::new(Mutex::new(user_handle));
+    let auth_service: AuthService<DbHandle, _> =
+      AuthService::<DbHandle, PasswordAuthImpl>::new(user_handle);
     let req = Json(req);
 
     let res = auth_service.signup(req).await;
