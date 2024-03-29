@@ -22,14 +22,12 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 
   useEffect(() => {
-    if (token) {
-      setApi(
-        new main_service({
-          TOKEN: token,
-          BASE: process.env.API_BASE,
-        })
-      );
-    }
+    setApi(
+      new main_service({
+        TOKEN: token,
+        BASE: process.env.API_BASE,
+      })
+    );
   }, [token]);
 
   return <ApiContext.Provider value={api}>{children}</ApiContext.Provider>;
