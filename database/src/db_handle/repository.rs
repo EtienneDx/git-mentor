@@ -59,6 +59,7 @@ pub trait RepositoryDbHandle {
   fn delete_repository(&mut self, repository_id: i32) -> bool;
 }
 
+#[cfg_attr(feature = "mock", faux::methods(path = "super"))]
 impl RepositoryDbHandle for DbHandle {
   fn create_repository(
     &mut self,
