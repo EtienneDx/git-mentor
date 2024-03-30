@@ -3,6 +3,7 @@ use diesel::{
   NullableExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl, Selectable,
   SelectableHelper,
 };
+use std::ops::DerefMut;
 
 use crate::{
   error::DatabaseError,
@@ -111,7 +112,7 @@ impl DbHandle {
     diesel::insert_into(assignments::table)
       .values(&new_assignment)
       .returning(Assignment::as_select())
-      .get_result(&mut self.conn)
+      .get_result(self.conn.deref_mut())
       .map_err(DatabaseError::from)
   }
 }
@@ -168,7 +169,7 @@ impl AssignmentDbHandle for DbHandle {
     assignments::table
       .filter(dsl::id.eq(assignment_id))
       .select(Assignment::as_select())
-      .first(&mut self.conn)
+      .first(self.conn.deref_mut())
       .optional()
       .map_err(DatabaseError::from)
   }
@@ -180,7 +181,7 @@ impl AssignmentDbHandle for DbHandle {
       .filter(dsl::id.eq(assignment_id))
       .inner_join(crate::schema::groups::table)
       .select(Group::as_select())
-      .first(&mut self.conn)
+      .first(self.conn.deref_mut())
       .optional();
 
     match group {
@@ -202,7 +203,7 @@ impl AssignmentDbHandle for DbHandle {
         crate::schema::repositories::table.on(dsl::base_repo_id.eq(repositories::dsl::id)),
       )
       .select(Repository::as_select())
-      .first(&mut self.conn)
+      .first(self.conn.deref_mut())
       .optional();
 
     match repo {
@@ -225,7 +226,7 @@ impl AssignmentDbHandle for DbHandle {
           .on(dsl::test_repo_id.eq(repositories::dsl::id.nullable())),
       )
       .select(Repository::as_select())
-      .first(&mut self.conn)
+      .first(self.conn.deref_mut())
       .optional();
 
     match repo {
@@ -248,7 +249,7 @@ impl AssignmentDbHandle for DbHandle {
           .on(dsl::correction_repo_id.eq(repositories::dsl::id.nullable())),
       )
       .select(Repository::as_select())
-      .first(&mut self.conn)
+      .first(self.conn.deref_mut())
       .optional();
 
     match repo {
@@ -267,7 +268,7 @@ impl AssignmentDbHandle for DbHandle {
     repositories::table
       .filter(dsl::assignment_id.eq(assignment_id))
       .select(Repository::as_select())
-      .load(&mut self.conn)
+      .load(self.conn.deref_mut())
       .map_err(DatabaseError::from)
   }
 
@@ -275,7 +276,7 @@ impl AssignmentDbHandle for DbHandle {
     use crate::schema::assignments::dsl;
 
     diesel::delete(assignments::table.filter(dsl::id.eq(assignment_id)))
-      .execute(&mut self.conn)
+      .execute(self.conn.deref_mut())
       .map(|n| n > 0)
       .map_err(DatabaseError::from)
   }

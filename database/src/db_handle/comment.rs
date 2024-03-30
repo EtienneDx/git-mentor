@@ -3,6 +3,7 @@ use diesel::{
   RunQueryDsl, Selectable, SelectableHelper,
 };
 use diesel_derive_enum::DbEnum;
+use std::ops::DerefMut;
 
 use crate::{error::DatabaseError, DbHandle};
 
@@ -106,7 +107,7 @@ impl DbHandle {
 
     diesel::insert_into(comments::table)
       .values(&new_comment)
-      .get_result(&mut self.conn)
+      .get_result(self.conn.deref_mut())
       .map_err(DatabaseError::from)
   }
 }
@@ -226,7 +227,7 @@ impl CommentDbHandle for DbHandle {
     dsl::comments
       .filter(dsl::id.eq(comment_id))
       .select(Comment::as_select())
-      .first(&mut self.conn)
+      .first(self.conn.deref_mut())
       .optional()
       .map_err(DatabaseError::from)
   }
@@ -242,7 +243,7 @@ impl CommentDbHandle for DbHandle {
       .filter(dsl::repository_id.eq(repository_id))
       .filter(dsl::commit_hash.eq(commit_hash))
       .select(Comment::as_select())
-      .load(&mut self.conn)
+      .load(self.conn.deref_mut())
       .map_err(DatabaseError::from)
   }
 
@@ -252,7 +253,7 @@ impl CommentDbHandle for DbHandle {
     dsl::comments
       .filter(dsl::respond_to.eq(comment_id))
       .select(Comment::as_select())
-      .load(&mut self.conn)
+      .load(self.conn.deref_mut())
       .map_err(DatabaseError::from)
   }
 
@@ -260,7 +261,7 @@ impl CommentDbHandle for DbHandle {
     use crate::schema::comments::dsl::*;
 
     diesel::delete(comments.find(comment_id))
-      .execute(&mut self.conn)
+      .execute(self.conn.deref_mut())
       .map(|_| ())
       .map_err(DatabaseError::from)
   }

@@ -1,6 +1,4 @@
-use std::sync::{Arc, Mutex};
-
-use database::DbHandle;
+use database::connection_pool::ConnectionPool;
 use poem::{listener::TcpListener, middleware::Cors, EndpointExt, Route};
 use services::make_service;
 use swagger::add_swagger_ui;
@@ -14,12 +12,12 @@ async fn main() -> Result<(), std::io::Error> {
   simple_logger::SimpleLogger::new().env().init().unwrap();
   dotenv::dotenv().ok();
 
-  let mut db = DbHandle::new_from_env().expect("Failed to connect to database");
-  db.run_migrations().expect("Failed to run migrations");
+  let connection_pool = ConnectionPool::new_from_env().expect("Failed to create connection pool");
+  connection_pool
+    .run_migrations()
+    .expect("Failed to run migrations");
 
-  let db = Arc::new(Mutex::new(db));
-
-  let mut api_service = make_service(db);
+  let mut api_service = make_service(connection_pool);
   let mut app = Route::new();
 
   (api_service, app) = add_swagger_ui(api_service, app);

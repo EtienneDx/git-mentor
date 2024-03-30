@@ -3,6 +3,7 @@ use diesel::{
   RunQueryDsl, Selectable, SelectableHelper,
 };
 use diesel_derive_enum::DbEnum;
+use std::ops::DerefMut;
 
 use crate::{error::DatabaseError, DbHandle};
 
@@ -81,7 +82,7 @@ impl CirunDbHandle for DbHandle {
     diesel::insert_into(cirun::table)
       .values(&new_cirun)
       .returning(Cirun::as_returning())
-      .get_result(&mut self.conn)
+      .get_result(self.conn.deref_mut())
       .map_err(DatabaseError::from)
   }
 
@@ -91,7 +92,7 @@ impl CirunDbHandle for DbHandle {
     let cirun = dsl::cirun
       .filter(dsl::id.eq(cirun_id))
       .select(Cirun::as_select())
-      .first(&mut self.conn)
+      .first(self.conn.deref_mut())
       .optional();
     match cirun {
       Ok(cirun) => Ok(cirun),
@@ -110,7 +111,7 @@ impl CirunDbHandle for DbHandle {
       .filter(dsl::repository_id.eq(repository_id))
       .filter(dsl::commit.eq(commit))
       .select(Cirun::as_select())
-      .first(&mut self.conn)
+      .first(self.conn.deref_mut())
       .optional();
     match cirun {
       Ok(cirun) => Ok(cirun),
@@ -125,7 +126,7 @@ impl CirunDbHandle for DbHandle {
     dsl::cirun
       .filter(dsl::repository_id.eq(repository_id))
       .select(Cirun::as_select())
-      .load(&mut self.conn)
+      .load(self.conn.deref_mut())
       .map_err(DatabaseError::from)
   }
 
@@ -139,7 +140,7 @@ impl CirunDbHandle for DbHandle {
     diesel::update(dsl::cirun.filter(dsl::id.eq(cirun_id)))
       .set(dsl::status.eq(status))
       .returning(Cirun::as_returning())
-      .get_result(&mut self.conn)
+      .get_result(self.conn.deref_mut())
       .map_err(DatabaseError::from)
   }
 }

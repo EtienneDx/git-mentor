@@ -1,4 +1,7 @@
-use crate::DbHandle;
+use crate::{
+  connection_pool::{ConnectionPool, ConnectionProvider},
+  DbHandle,
+};
 
 #[rstest::fixture]
 #[once]
@@ -6,18 +9,25 @@ fn connection_string() -> String {
   dotenv::dotenv().ok();
   let database_url = std::env::var("DATABASE_URL").unwrap();
 
-  // Run migrations once
-  let mut handle = DbHandle::new(&database_url).unwrap();
-
-  handle.run_migrations().expect("Error running migrations");
-  drop(handle);
+  let pool = ConnectionPool::new(&database_url).expect("Error creating connection pool");
+  pool.run_migrations().expect("Error running migrations");
+  drop(pool);
 
   database_url
 }
 
 #[rstest::fixture]
-pub fn db_handle(connection_string: &str) -> DbHandle {
-  DbHandle::new(&connection_string).expect("Error creating DbHandle")
+#[once]
+fn connection_pool(connection_string: &str) -> ConnectionPool {
+  let pool = ConnectionPool::new(&connection_string).expect("Error creating connection pool");
+  pool
+}
+
+#[rstest::fixture]
+pub fn db_handle(connection_pool: &ConnectionPool) -> DbHandle {
+  connection_pool
+    .get_connection()
+    .expect("Error getting connection")
 }
 
 #[macro_export]
@@ -32,6 +42,7 @@ macro_rules! transaction_tests {
 
         let mut f = move || {
           $($body)*
+          $tx.end_test_transaction();
           Result::<(), crate::error::DatabaseError>::Ok(())
         };
 

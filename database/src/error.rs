@@ -9,6 +9,8 @@ pub enum DatabaseError {
   VarError(#[from] std::env::VarError),
   #[error("Diesel error: {0}")]
   DieselError(#[from] diesel::result::Error),
+  #[error("Connection pool error: {0}")]
+  ConnectionPoolError(String),
   #[error("Migration error")]
   MigrationError,
   #[error("Not found")]
