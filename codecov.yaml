@@ -5,3 +5,13 @@ ignore:
   - "gmt-api/src/swagger.rs"
   - "database/src/schema.rs"
   - "database/src/db_handle/tests.rs"
+coverage:
+  status:
+    project:
+      default:
+        target: 80%
+        threshold: 0%
+    patch:
+      default:
+        target: 80%
+        threshold: 0%
