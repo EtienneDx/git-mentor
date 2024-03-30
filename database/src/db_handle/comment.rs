@@ -123,7 +123,7 @@ impl CommentDbHandle for DbHandle {
   ) -> Result<Comment, DatabaseError> {
     let new_comment = NewComment {
       repository_id,
-      commit_hash: commit_hash,
+      commit_hash,
       respond_to: None,
       file_path: None,
       message,
@@ -145,7 +145,7 @@ impl CommentDbHandle for DbHandle {
   ) -> Result<Comment, DatabaseError> {
     let new_comment = NewComment {
       repository_id,
-      commit_hash: commit_hash,
+      commit_hash,
       respond_to: None,
       file_path: Some(file_path),
       message,
@@ -186,7 +186,7 @@ impl CommentDbHandle for DbHandle {
   ) -> Result<Comment, DatabaseError> {
     let new_comment = NewComment {
       repository_id,
-      commit_hash: commit_hash,
+      commit_hash,
       respond_to: None,
       file_path: Some(file_path),
       message,

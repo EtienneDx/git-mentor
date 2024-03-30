@@ -54,7 +54,7 @@ pub trait UserDbHandle {
 }
 
 #[cfg_attr(feature = "mock", faux::methods(path = "super"))]
-impl<'a> UserDbHandle for DbHandle {
+impl UserDbHandle for DbHandle {
   fn create_user(
     &mut self,
     username: &str,
@@ -69,7 +69,7 @@ impl<'a> UserDbHandle for DbHandle {
       email,
       password,
       pubkey: &pubkey
-        .unwrap_or(vec![])
+        .unwrap_or_default()
         .into_iter()
         .map(|key| Some(key.to_string()))
         .collect(),

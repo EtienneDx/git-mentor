@@ -9,10 +9,6 @@ fn connection_string() -> String {
   dotenv::dotenv().ok();
   let database_url = std::env::var("DATABASE_URL").unwrap();
 
-  let pool = ConnectionPool::new(&database_url).expect("Error creating connection pool");
-  pool.run_migrations().expect("Error running migrations");
-  drop(pool);
-
   database_url
 }
 
@@ -20,6 +16,7 @@ fn connection_string() -> String {
 #[once]
 fn connection_pool(connection_string: &str) -> ConnectionPool {
   let pool = ConnectionPool::new(&connection_string).expect("Error creating connection pool");
+  pool.run_migrations().expect("Error running migrations");
   pool
 }
 
