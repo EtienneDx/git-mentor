@@ -1,3 +1,5 @@
+use std::ops::DerefMut;
+
 use diesel::{
   migration::MigrationVersion,
   r2d2::{ConnectionManager, PooledConnection},
@@ -18,12 +20,20 @@ pub mod repository;
 pub mod user;
 
 #[cfg_attr(feature = "mock", faux::create)]
-pub struct DbHandle {
-  conn: PooledConnection<ConnectionManager<PgConnection>>,
+pub struct BaseDbHandle<T>
+where
+  T: DerefMut<Target = PgConnection>,
+{
+  pub(crate) conn: T,
 }
 
+pub type DbHandle = BaseDbHandle<PooledConnection<ConnectionManager<PgConnection>>>;
+
 #[cfg_attr(feature = "mock", faux::methods)]
-impl DbHandle {
+impl<T> BaseDbHandle<T>
+where
+  T: DerefMut<Target = PgConnection>,
+{
   pub fn run_migrations(&mut self) -> Result<Vec<MigrationVersion>, DatabaseError> {
     const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations");
 
@@ -38,21 +48,13 @@ impl DbHandle {
     use diesel::Connection;
     self.conn.begin_test_transaction()
   }
-
-  /// Method which aims at rendering the connection unoperable. This is useful for testing to ensure
-  /// that the connection is not sent back to the pool after a test, since there is no "end_test_transaction" method
-  /// in diesel.
-  #[cfg(test)]
-  pub fn end_test_transaction(&mut self) -> () {
-    use diesel::RunQueryDsl;
-    use std::ops::DerefMut;
-    let _ = diesel::dsl::sql_query("ERROR").execute(self.conn.deref_mut());
-  }
 }
 
 #[cfg_attr(feature = "mock", faux::methods)]
-impl From<PooledConnection<ConnectionManager<PgConnection>>> for DbHandle {
+impl From<PooledConnection<ConnectionManager<PgConnection>>>
+  for BaseDbHandle<PooledConnection<ConnectionManager<PgConnection>>>
+{
   fn from(conn: PooledConnection<ConnectionManager<PgConnection>>) -> Self {
-    DbHandle { conn }
+    BaseDbHandle { conn }
   }
 }

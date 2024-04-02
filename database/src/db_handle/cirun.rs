@@ -1,11 +1,11 @@
 use diesel::{
-  deserialize::Queryable, prelude::Insertable, ExpressionMethods, OptionalExtension, QueryDsl,
-  RunQueryDsl, Selectable, SelectableHelper,
+  deserialize::Queryable, prelude::Insertable, ExpressionMethods, OptionalExtension, PgConnection,
+  QueryDsl, RunQueryDsl, Selectable, SelectableHelper,
 };
 use diesel_derive_enum::DbEnum;
 use std::ops::DerefMut;
 
-use crate::{error::DatabaseError, DbHandle};
+use crate::{db_handle::BaseDbHandle, error::DatabaseError};
 
 #[derive(Debug, DbEnum, PartialEq, Eq)]
 #[ExistingTypePath = "crate::schema::sql_types::Status"]
@@ -60,7 +60,10 @@ pub trait CirunDbHandle {
 }
 
 #[cfg_attr(feature = "mock", faux::methods(path = "super"))]
-impl CirunDbHandle for DbHandle {
+impl<T> CirunDbHandle for BaseDbHandle<T>
+where
+  T: DerefMut<Target = PgConnection>,
+{
   fn create_cirun(&mut self, repository_id: i32, commit: &str) -> Result<Cirun, DatabaseError> {
     self.create_cirun_with_status(repository_id, commit, &Status::Pending)
   }

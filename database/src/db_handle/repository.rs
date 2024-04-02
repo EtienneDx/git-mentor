@@ -1,11 +1,11 @@
 use diesel::{
-  deserialize::Queryable, prelude::Insertable, ExpressionMethods, OptionalExtension, QueryDsl,
-  RunQueryDsl, Selectable, SelectableHelper,
+  deserialize::Queryable, prelude::Insertable, ExpressionMethods, OptionalExtension, PgConnection,
+  QueryDsl, RunQueryDsl, Selectable, SelectableHelper,
 };
 use diesel_derive_enum::DbEnum;
 use std::ops::DerefMut;
 
-use crate::{error::DatabaseError, DbHandle};
+use crate::{db_handle::BaseDbHandle, error::DatabaseError};
 
 use super::user::User;
 
@@ -61,7 +61,10 @@ pub trait RepositoryDbHandle {
 }
 
 #[cfg_attr(feature = "mock", faux::methods(path = "super"))]
-impl RepositoryDbHandle for DbHandle {
+impl<T> RepositoryDbHandle for BaseDbHandle<T>
+where
+  T: DerefMut<Target = PgConnection>,
+{
   fn create_repository(
     &mut self,
     name: &str,

@@ -1,13 +1,13 @@
 use diesel::{
-  deserialize::Queryable, prelude::Insertable, ExpressionMethods, OptionalExtension, QueryDsl,
-  RunQueryDsl, Selectable, SelectableHelper,
+  deserialize::Queryable, prelude::Insertable, ExpressionMethods, OptionalExtension, PgConnection,
+  QueryDsl, RunQueryDsl, Selectable, SelectableHelper,
 };
 use std::ops::DerefMut;
 
 use crate::{
+  db_handle::BaseDbHandle,
   error::DatabaseError,
   schema::{assignments, group_students, groups},
-  DbHandle,
 };
 
 use super::{assignment::Assignment, user::User};
@@ -65,7 +65,10 @@ pub trait GroupDbHandle {
 }
 
 #[cfg_attr(feature = "mock", faux::methods(path = "super"))]
-impl GroupDbHandle for DbHandle {
+impl<T> GroupDbHandle for BaseDbHandle<T>
+where
+  T: DerefMut<Target = PgConnection>,
+{
   fn create_group(&mut self, name: &str, teacher_id: Option<i32>) -> Result<Group, DatabaseError> {
     let new_group = NewGroup {
       teacher_id,

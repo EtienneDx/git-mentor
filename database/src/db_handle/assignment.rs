@@ -1,14 +1,14 @@
 use diesel::{
   deserialize::Queryable, prelude::Insertable, ExpressionMethods, JoinOnDsl,
-  NullableExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl, Selectable,
+  NullableExpressionMethods, OptionalExtension, PgConnection, QueryDsl, RunQueryDsl, Selectable,
   SelectableHelper,
 };
 use std::ops::DerefMut;
 
 use crate::{
+  db_handle::BaseDbHandle,
   error::DatabaseError,
   schema::{assignments, repositories},
-  DbHandle,
 };
 
 use super::{group::Group, repository::Repository};
@@ -94,7 +94,10 @@ pub trait AssignmentDbHandle {
 }
 
 #[cfg_attr(feature = "mock", faux::methods(path = "super"))]
-impl DbHandle {
+impl<T> BaseDbHandle<T>
+where
+  T: DerefMut<Target = PgConnection>,
+{
   fn create_assignment_inner(
     &mut self,
     group_id: i32,
@@ -118,7 +121,10 @@ impl DbHandle {
 }
 
 #[cfg_attr(feature = "mock", faux::methods(path = "super"))]
-impl AssignmentDbHandle for DbHandle {
+impl<T> AssignmentDbHandle for BaseDbHandle<T>
+where
+  T: DerefMut<Target = PgConnection>,
+{
   fn create_assignment(
     &mut self,
     group_id: i32,

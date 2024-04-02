@@ -1,9 +1,9 @@
 use diesel::{
-  r2d2::{ConnectionManager, Pool},
+  r2d2::{ConnectionManager, Pool, PooledConnection},
   PgConnection,
 };
 
-use crate::{error::DatabaseError, DbHandle};
+use crate::{db_handle::BaseDbHandle, error::DatabaseError};
 
 pub trait ConnectionProvider: Send + Sync {
   type Connection;
@@ -39,9 +39,11 @@ impl ConnectionPool {
 
 #[cfg_attr(feature = "mock", faux::methods)]
 impl ConnectionProvider for ConnectionPool {
-  type Connection = DbHandle;
+  type Connection = BaseDbHandle<PooledConnection<ConnectionManager<PgConnection>>>;
 
-  fn get_connection(&self) -> Result<DbHandle, DatabaseError> {
+  fn get_connection(
+    &self,
+  ) -> Result<BaseDbHandle<PooledConnection<ConnectionManager<PgConnection>>>, DatabaseError> {
     let conn = self
       .pool
       .get()

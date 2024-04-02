@@ -1,11 +1,11 @@
 use diesel::{
-  deserialize::Queryable, prelude::Insertable, ExpressionMethods, OptionalExtension, QueryDsl,
-  RunQueryDsl, Selectable, SelectableHelper,
+  deserialize::Queryable, prelude::Insertable, ExpressionMethods, OptionalExtension, PgConnection,
+  QueryDsl, RunQueryDsl, Selectable, SelectableHelper,
 };
 use diesel_derive_enum::DbEnum;
 use std::ops::DerefMut;
 
-use crate::{error::DatabaseError, DbHandle};
+use crate::{db_handle::BaseDbHandle, error::DatabaseError};
 
 #[derive(Debug, DbEnum, PartialEq, Eq)]
 #[ExistingTypePath = "crate::schema::sql_types::Commentauthor"]
@@ -101,7 +101,10 @@ pub trait CommentDbHandle {
 }
 
 #[cfg_attr(feature = "mock", faux::methods(path = "super"))]
-impl DbHandle {
+impl<T> BaseDbHandle<T>
+where
+  T: DerefMut<Target = PgConnection>,
+{
   fn add_comment_inner(&mut self, new_comment: NewComment) -> Result<Comment, DatabaseError> {
     use crate::schema::comments;
 
@@ -113,7 +116,10 @@ impl DbHandle {
 }
 
 #[cfg_attr(feature = "mock", faux::methods(path = "super"))]
-impl CommentDbHandle for DbHandle {
+impl<T> CommentDbHandle for BaseDbHandle<T>
+where
+  T: DerefMut<Target = PgConnection>,
+{
   fn add_comment(
     &mut self,
     repository_id: i32,
