@@ -1,10 +1,11 @@
 use diesel::{
-  deserialize::Queryable, prelude::Insertable, ExpressionMethods, OptionalExtension, QueryDsl,
-  RunQueryDsl, Selectable, SelectableHelper,
+  deserialize::Queryable, prelude::Insertable, ExpressionMethods, OptionalExtension, PgConnection,
+  QueryDsl, RunQueryDsl, Selectable, SelectableHelper,
 };
 use diesel_derive_enum::DbEnum;
+use std::ops::DerefMut;
 
-use crate::{error::DatabaseError, DbHandle};
+use crate::{db_handle::BaseDbHandle, error::DatabaseError};
 
 #[derive(Debug, DbEnum, PartialEq, Eq)]
 #[ExistingTypePath = "crate::schema::sql_types::Commentauthor"]
@@ -100,19 +101,25 @@ pub trait CommentDbHandle {
 }
 
 #[cfg_attr(feature = "mock", faux::methods(path = "super"))]
-impl DbHandle {
+impl<T> BaseDbHandle<T>
+where
+  T: DerefMut<Target = PgConnection>,
+{
   fn add_comment_inner(&mut self, new_comment: NewComment) -> Result<Comment, DatabaseError> {
     use crate::schema::comments;
 
     diesel::insert_into(comments::table)
       .values(&new_comment)
-      .get_result(&mut self.conn)
+      .get_result(self.conn.deref_mut())
       .map_err(DatabaseError::from)
   }
 }
 
 #[cfg_attr(feature = "mock", faux::methods(path = "super"))]
-impl CommentDbHandle for DbHandle {
+impl<T> CommentDbHandle for BaseDbHandle<T>
+where
+  T: DerefMut<Target = PgConnection>,
+{
   fn add_comment(
     &mut self,
     repository_id: i32,
@@ -122,7 +129,7 @@ impl CommentDbHandle for DbHandle {
   ) -> Result<Comment, DatabaseError> {
     let new_comment = NewComment {
       repository_id,
-      commit_hash: commit_hash,
+      commit_hash,
       respond_to: None,
       file_path: None,
       message,
@@ -144,7 +151,7 @@ impl CommentDbHandle for DbHandle {
   ) -> Result<Comment, DatabaseError> {
     let new_comment = NewComment {
       repository_id,
-      commit_hash: commit_hash,
+      commit_hash,
       respond_to: None,
       file_path: Some(file_path),
       message,
@@ -185,7 +192,7 @@ impl CommentDbHandle for DbHandle {
   ) -> Result<Comment, DatabaseError> {
     let new_comment = NewComment {
       repository_id,
-      commit_hash: commit_hash,
+      commit_hash,
       respond_to: None,
       file_path: Some(file_path),
       message,
@@ -226,7 +233,7 @@ impl CommentDbHandle for DbHandle {
     dsl::comments
       .filter(dsl::id.eq(comment_id))
       .select(Comment::as_select())
-      .first(&mut self.conn)
+      .first(self.conn.deref_mut())
       .optional()
       .map_err(DatabaseError::from)
   }
@@ -242,7 +249,7 @@ impl CommentDbHandle for DbHandle {
       .filter(dsl::repository_id.eq(repository_id))
       .filter(dsl::commit_hash.eq(commit_hash))
       .select(Comment::as_select())
-      .load(&mut self.conn)
+      .load(self.conn.deref_mut())
       .map_err(DatabaseError::from)
   }
 
@@ -252,7 +259,7 @@ impl CommentDbHandle for DbHandle {
     dsl::comments
       .filter(dsl::respond_to.eq(comment_id))
       .select(Comment::as_select())
-      .load(&mut self.conn)
+      .load(self.conn.deref_mut())
       .map_err(DatabaseError::from)
   }
 
@@ -260,7 +267,7 @@ impl CommentDbHandle for DbHandle {
     use crate::schema::comments::dsl::*;
 
     diesel::delete(comments.find(comment_id))
-      .execute(&mut self.conn)
+      .execute(self.conn.deref_mut())
       .map(|_| ())
       .map_err(DatabaseError::from)
   }

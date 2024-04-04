@@ -1,9 +1,10 @@
 use diesel::{
-  deserialize::Queryable, prelude::Insertable, ExpressionMethods, OptionalExtension, QueryDsl,
-  RunQueryDsl, Selectable, SelectableHelper,
+  deserialize::Queryable, prelude::Insertable, ExpressionMethods, OptionalExtension, PgConnection,
+  QueryDsl, RunQueryDsl, Selectable, SelectableHelper,
 };
+use std::ops::DerefMut;
 
-use crate::{error::DatabaseError, DbHandle};
+use crate::{db_handle::BaseDbHandle, error::DatabaseError};
 
 use super::group::Group;
 
@@ -53,7 +54,10 @@ pub trait UserDbHandle {
 }
 
 #[cfg_attr(feature = "mock", faux::methods(path = "super"))]
-impl UserDbHandle for DbHandle {
+impl<T> UserDbHandle for BaseDbHandle<T>
+where
+  T: DerefMut<Target = PgConnection>,
+{
   fn create_user(
     &mut self,
     username: &str,
@@ -68,7 +72,7 @@ impl UserDbHandle for DbHandle {
       email,
       password,
       pubkey: &pubkey
-        .unwrap_or(vec![])
+        .unwrap_or_default()
         .into_iter()
         .map(|key| Some(key.to_string()))
         .collect(),
@@ -77,7 +81,7 @@ impl UserDbHandle for DbHandle {
     diesel::insert_into(users::table)
       .values(&new_user)
       .returning(User::as_returning())
-      .get_result(&mut self.conn)
+      .get_result(self.conn.deref_mut())
       .map_err(DatabaseError::from)
   }
 
@@ -87,7 +91,7 @@ impl UserDbHandle for DbHandle {
     let user = dsl::users
       .filter(dsl::id.eq(user_id))
       .select(User::as_select())
-      .first(&mut self.conn)
+      .first(self.conn.deref_mut())
       .optional();
 
     match user {
@@ -105,7 +109,7 @@ impl UserDbHandle for DbHandle {
     let user = dsl::users
       .filter(dsl::username.eq(username))
       .select(User::as_select())
-      .first(&mut self.conn)
+      .first(self.conn.deref_mut())
       .optional();
 
     match user {
@@ -123,7 +127,7 @@ impl UserDbHandle for DbHandle {
     let user = dsl::users
       .filter(dsl::email.eq(email))
       .select(User::as_select())
-      .first(&mut self.conn)
+      .first(self.conn.deref_mut())
       .optional();
 
     match user {
@@ -140,7 +144,7 @@ impl UserDbHandle for DbHandle {
       "UPDATE users SET pubkey = array_append(pubkey, '{}') WHERE id = {}",
       pubkey, user_id
     ))
-    .execute(&mut self.conn)
+    .execute(self.conn.deref_mut())
     .map(|_| ())
     .map_err(DatabaseError::from)
   }
@@ -149,7 +153,7 @@ impl UserDbHandle for DbHandle {
     use crate::schema::users::dsl::users;
 
     diesel::delete(users.find(user_id))
-      .execute(&mut self.conn)
+      .execute(self.conn.deref_mut())
       .map(|_| ())
       .map_err(DatabaseError::from)
   }
@@ -160,7 +164,7 @@ impl UserDbHandle for DbHandle {
     dsl::groups
       .filter(dsl::teacher_id.eq(user_id))
       .select(Group::as_select())
-      .load(&mut self.conn)
+      .load(self.conn.deref_mut())
       .map_err(DatabaseError::from)
   }
 
@@ -171,7 +175,7 @@ impl UserDbHandle for DbHandle {
       .filter(dsl::student_id.eq(user_id))
       .inner_join(crate::schema::groups::table)
       .select(Group::as_select())
-      .load(&mut self.conn)
+      .load(self.conn.deref_mut())
       .map_err(DatabaseError::from)
   }
 }

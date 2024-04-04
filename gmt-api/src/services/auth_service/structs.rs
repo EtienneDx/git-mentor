@@ -1,6 +1,8 @@
 use std::sync::{Arc, Mutex, PoisonError};
 
-use database::{db_handle::user::UserDbHandle, error::DatabaseError};
+use database::{
+  connection_pool::ConnectionProvider, db_handle::user::UserDbHandle, error::DatabaseError,
+};
 use gmt_common::password::PasswordAuth;
 use poem_openapi::{ApiResponse, Object, Union};
 use serde::{Deserialize, Serialize};
@@ -13,22 +15,24 @@ use super::super::structs::StringResponse;
 pub trait DbType: UserDbHandle + 'static {}
 impl<T: UserDbHandle + 'static> DbType for T {}
 
-pub struct AuthService<Db, Pass>
+pub struct AuthService<DbPool, Db, Pass>
 where
+  DbPool: ConnectionProvider<Connection = Db> + 'static,
   Db: DbType,
   Arc<Mutex<Db>>: Send + Sync,
   Pass: PasswordAuth + 'static,
 {
-  pub db: Arc<Mutex<Db>>,
+  pub db: DbPool,
   _phantom: std::marker::PhantomData<Pass>,
 }
-impl<Db, Pass> AuthService<Db, Pass>
+impl<DbPool, Db, Pass> AuthService<DbPool, Db, Pass>
 where
+  DbPool: ConnectionProvider<Connection = Db> + 'static,
   Db: DbType,
   Arc<Mutex<Db>>: Send + Sync,
   Pass: PasswordAuth + 'static,
 {
-  pub fn new(db: Arc<Mutex<Db>>) -> Self {
+  pub fn new(db: DbPool) -> Self {
     Self {
       db,
       _phantom: std::marker::PhantomData,

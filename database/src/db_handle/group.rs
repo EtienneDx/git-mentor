@@ -1,12 +1,13 @@
 use diesel::{
-  deserialize::Queryable, prelude::Insertable, ExpressionMethods, OptionalExtension, QueryDsl,
-  RunQueryDsl, Selectable, SelectableHelper,
+  deserialize::Queryable, prelude::Insertable, ExpressionMethods, OptionalExtension, PgConnection,
+  QueryDsl, RunQueryDsl, Selectable, SelectableHelper,
 };
+use std::ops::DerefMut;
 
 use crate::{
+  db_handle::BaseDbHandle,
   error::DatabaseError,
   schema::{assignments, group_students, groups},
-  DbHandle,
 };
 
 use super::{assignment::Assignment, user::User};
@@ -64,7 +65,10 @@ pub trait GroupDbHandle {
 }
 
 #[cfg_attr(feature = "mock", faux::methods(path = "super"))]
-impl GroupDbHandle for DbHandle {
+impl<T> GroupDbHandle for BaseDbHandle<T>
+where
+  T: DerefMut<Target = PgConnection>,
+{
   fn create_group(&mut self, name: &str, teacher_id: Option<i32>) -> Result<Group, DatabaseError> {
     let new_group = NewGroup {
       teacher_id,
@@ -74,7 +78,7 @@ impl GroupDbHandle for DbHandle {
     diesel::insert_into(groups::table)
       .values(&new_group)
       .returning(Group::as_returning())
-      .get_result(&mut self.conn)
+      .get_result(self.conn.deref_mut())
       .map_err(DatabaseError::from)
   }
 
@@ -84,7 +88,7 @@ impl GroupDbHandle for DbHandle {
     groups::table
       .filter(dsl::id.eq(group_id))
       .select(Group::as_select())
-      .first(&mut self.conn)
+      .first(self.conn.deref_mut())
       .optional()
       .map_err(DatabaseError::from)
   }
@@ -96,7 +100,7 @@ impl GroupDbHandle for DbHandle {
       .filter(dsl::id.eq(group_id))
       .inner_join(crate::schema::users::table)
       .select(crate::schema::users::all_columns)
-      .first(&mut self.conn);
+      .first(self.conn.deref_mut());
 
     match res {
       Ok(user) => Ok(Some(user)),
@@ -115,7 +119,7 @@ impl GroupDbHandle for DbHandle {
     diesel::update(groups::table.filter(dsl::id.eq(group_id)))
       .set(dsl::teacher_id.eq(teacher_id))
       .returning(Group::as_returning())
-      .get_result(&mut self.conn)
+      .get_result(self.conn.deref_mut())
       .map_err(DatabaseError::from)
   }
 
@@ -125,7 +129,7 @@ impl GroupDbHandle for DbHandle {
     assignments::table
       .filter(dsl::group_id.eq(group_id))
       .select(Assignment::as_select())
-      .load(&mut self.conn)
+      .load(self.conn.deref_mut())
       .map_err(DatabaseError::from)
   }
 
@@ -137,7 +141,7 @@ impl GroupDbHandle for DbHandle {
 
     diesel::insert_into(group_students::table)
       .values(&new_group_student)
-      .execute(&mut self.conn)
+      .execute(self.conn.deref_mut())
       .map_err(DatabaseError::from)?;
 
     Ok(())
@@ -150,7 +154,7 @@ impl GroupDbHandle for DbHandle {
       .filter(dsl::group_id.eq(group_id))
       .inner_join(crate::schema::users::table)
       .select(crate::schema::users::all_columns)
-      .load(&mut self.conn)
+      .load(self.conn.deref_mut())
       .map_err(DatabaseError::from)
   }
 
@@ -158,7 +162,7 @@ impl GroupDbHandle for DbHandle {
     use crate::schema::groups::dsl;
 
     diesel::delete(groups::table.filter(dsl::id.eq(group_id)))
-      .execute(&mut self.conn)
+      .execute(self.conn.deref_mut())
       .is_ok()
   }
 }

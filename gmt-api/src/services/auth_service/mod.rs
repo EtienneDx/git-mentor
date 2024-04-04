@@ -1,5 +1,6 @@
 use std::sync::{Arc, Mutex};
 
+use database::connection_pool::ConnectionProvider;
 use gmt_common::password::PasswordAuth;
 use hmac::{Hmac, Mac};
 use jwt::{Header, SignWithKey, Token};
@@ -14,8 +15,9 @@ pub mod user_token;
 pub use structs::*;
 
 #[OpenApi]
-impl<Db, Pass> AuthService<Db, Pass>
+impl<DbPool, Db, Pass> AuthService<DbPool, Db, Pass>
 where
+  DbPool: ConnectionProvider<Connection = Db> + 'static,
   Db: DbType,
   Arc<Mutex<Db>>: Send + Sync,
   Pass: PasswordAuth + Send + Sync + 'static,
@@ -25,7 +27,7 @@ where
     &self,
     req: Json<LoginRequest>,
   ) -> Result<Json<LoginResponse>, AuthenticationError> {
-    let mut db = self.db.lock()?;
+    let mut db = self.db.get_connection()?;
     let (user, password) = match req.0 {
       LoginRequest::UsernameLogin(req) => (
         db.get_user_by_username(&req.username)?,
@@ -54,7 +56,7 @@ where
     &self,
     req: Json<SignUpRequest>,
   ) -> Result<Json<LoginResponse>, AuthenticationError> {
-    let mut db = self.db.lock()?;
+    let mut db = self.db.get_connection()?;
 
     if db.get_user_by_username(&req.username)?.is_some() {
       return Err(AuthenticationError::Conflict(
@@ -82,7 +84,7 @@ where
 #[cfg(test)]
 mod tests {
   use super::*;
-  use database::{db_handle::user::User, DbHandle};
+  use database::{connection_pool::ConnectionPool, db_handle::user::User, DbHandle};
   use gmt_common::password::PasswordAuthImpl;
   use rstest::rstest;
 
@@ -133,14 +135,17 @@ mod tests {
     #[case] user: Option<User>,
     #[case] expected: Result<(), AuthenticationError>,
   ) {
-    let mut user_handle = DbHandle::faux();
-    let u = user.clone();
-    faux::when!(user_handle.get_user_by_username).then(move |_| Ok(user.clone()));
-    faux::when!(user_handle.get_user_by_email).then(move |_| Ok(u.clone()));
-
-    let user_handle = Arc::new(Mutex::new(user_handle));
-    let auth_service: AuthService<DbHandle, _> =
-      AuthService::<DbHandle, PasswordAuthImpl>::new(user_handle);
+    let mut pool = ConnectionPool::faux();
+    faux::when!(pool.get_connection).then(move |_| {
+      let mut user_handle = DbHandle::faux();
+      let u = user.clone();
+      let u2 = user.clone();
+      faux::when!(user_handle.get_user_by_username).then(move |_| Ok(u2.clone()));
+      faux::when!(user_handle.get_user_by_email).then(move |_| Ok(u.clone()));
+      Ok(user_handle)
+    });
+    let auth_service: AuthService<ConnectionPool, DbHandle, _> =
+      AuthService::<ConnectionPool, DbHandle, PasswordAuthImpl>::new(pool);
     let req = Json(req);
 
     let res = auth_service.login(req).await;
@@ -185,14 +190,19 @@ mod tests {
     #[case] email_user: Option<User>,
     #[case] expected: Result<(), AuthenticationError>,
   ) {
-    let mut user_handle = DbHandle::faux();
-    faux::when!(user_handle.get_user_by_username).then(move |_| Ok(username_user.clone()));
-    faux::when!(user_handle.get_user_by_email).then(move |_| Ok(email_user.clone()));
-    faux::when!(user_handle.create_user).then(move |(_, _, _, _)| Ok(get_user()));
+    let mut pool = ConnectionPool::faux();
+    faux::when!(pool.get_connection).then(move |_| {
+      let mut user_handle = DbHandle::faux();
+      let username_user = username_user.clone();
+      let email_user = email_user.clone();
+      faux::when!(user_handle.get_user_by_username).then(move |_| Ok(username_user.clone()));
+      faux::when!(user_handle.get_user_by_email).then(move |_| Ok(email_user.clone()));
+      faux::when!(user_handle.create_user).then(move |(_, _, _, _)| Ok(get_user()));
+      Ok(user_handle)
+    });
+    let auth_service: AuthService<ConnectionPool, DbHandle, _> =
+      AuthService::<ConnectionPool, DbHandle, PasswordAuthImpl>::new(pool);
 
-    let user_handle = Arc::new(Mutex::new(user_handle));
-    let auth_service: AuthService<DbHandle, _> =
-      AuthService::<DbHandle, PasswordAuthImpl>::new(user_handle);
     let req = Json(req);
 
     let res = auth_service.signup(req).await;

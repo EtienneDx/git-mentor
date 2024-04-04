@@ -1,10 +1,11 @@
 use diesel::{
-  deserialize::Queryable, prelude::Insertable, ExpressionMethods, OptionalExtension, QueryDsl,
-  RunQueryDsl, Selectable, SelectableHelper,
+  deserialize::Queryable, prelude::Insertable, ExpressionMethods, OptionalExtension, PgConnection,
+  QueryDsl, RunQueryDsl, Selectable, SelectableHelper,
 };
 use diesel_derive_enum::DbEnum;
+use std::ops::DerefMut;
 
-use crate::{error::DatabaseError, DbHandle};
+use crate::{db_handle::BaseDbHandle, error::DatabaseError};
 
 use super::user::User;
 
@@ -60,7 +61,10 @@ pub trait RepositoryDbHandle {
 }
 
 #[cfg_attr(feature = "mock", faux::methods(path = "super"))]
-impl RepositoryDbHandle for DbHandle {
+impl<T> RepositoryDbHandle for BaseDbHandle<T>
+where
+  T: DerefMut<Target = PgConnection>,
+{
   fn create_repository(
     &mut self,
     name: &str,
@@ -80,7 +84,7 @@ impl RepositoryDbHandle for DbHandle {
     diesel::insert_into(repositories::table)
       .values(&new_repository)
       .returning(Repository::as_returning())
-      .get_result(&mut self.conn)
+      .get_result(self.conn.deref_mut())
       .map_err(DatabaseError::from)
   }
 
@@ -93,7 +97,7 @@ impl RepositoryDbHandle for DbHandle {
     dsl::repositories
       .filter(dsl::id.eq(repository_id))
       .select(Repository::as_select())
-      .first(&mut self.conn)
+      .first(self.conn.deref_mut())
       .optional()
       .map_err(DatabaseError::from)
   }
@@ -104,7 +108,7 @@ impl RepositoryDbHandle for DbHandle {
     let repository = dsl::repositories
       .filter(dsl::name.eq(name))
       .select(Repository::as_select())
-      .first(&mut self.conn)
+      .first(self.conn.deref_mut())
       .optional();
 
     match repository {
@@ -122,7 +126,7 @@ impl RepositoryDbHandle for DbHandle {
     dsl::repositories
       .filter(dsl::owner_id.eq(user_id))
       .select(Repository::as_select())
-      .load(&mut self.conn)
+      .load(self.conn.deref_mut())
       .map_err(DatabaseError::from)
   }
 
@@ -134,7 +138,7 @@ impl RepositoryDbHandle for DbHandle {
       .inner_join(users::table)
       .filter(dsl::id.eq(repository_id))
       .select(User::as_select())
-      .first(&mut self.conn)
+      .first(self.conn.deref_mut())
       .map_err(DatabaseError::from)
   }
 
@@ -142,7 +146,7 @@ impl RepositoryDbHandle for DbHandle {
     use crate::schema::repositories::dsl::repositories;
 
     diesel::delete(repositories.find(repository_id))
-      .execute(&mut self.conn)
+      .execute(self.conn.deref_mut())
       .is_ok()
   }
 }

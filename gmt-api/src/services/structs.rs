@@ -12,8 +12,8 @@ impl From<String> for StringResponse {
   }
 }
 
-impl<'a> From<&'a str> for StringResponse {
-  fn from(s: &'a str) -> Self {
+impl From<&str> for StringResponse {
+  fn from(s: &str) -> Self {
     Self(PlainText(s.to_string()))
   }
 }

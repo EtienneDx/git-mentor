@@ -1,4 +1,10 @@
-use diesel::{migration::MigrationVersion, Connection, PgConnection};
+use std::ops::DerefMut;
+
+use diesel::{
+  migration::MigrationVersion,
+  r2d2::{ConnectionManager, PooledConnection},
+  PgConnection,
+};
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 
 use crate::error::DatabaseError;
@@ -14,22 +20,20 @@ pub mod repository;
 pub mod user;
 
 #[cfg_attr(feature = "mock", faux::create)]
-pub struct DbHandle {
-  conn: PgConnection,
+pub struct BaseDbHandle<T>
+where
+  T: DerefMut<Target = PgConnection>,
+{
+  pub(crate) conn: T,
 }
 
+pub type DbHandle = BaseDbHandle<PooledConnection<ConnectionManager<PgConnection>>>;
+
 #[cfg_attr(feature = "mock", faux::methods)]
-impl DbHandle {
-  pub fn new(database_url: &str) -> Result<DbHandle, DatabaseError> {
-    let conn = PgConnection::establish(database_url)?;
-    Ok(DbHandle { conn })
-  }
-
-  pub fn new_from_env() -> Result<DbHandle, DatabaseError> {
-    let database_url = std::env::var("DATABASE_URL")?;
-    DbHandle::new(&database_url)
-  }
-
+impl<T> BaseDbHandle<T>
+where
+  T: DerefMut<Target = PgConnection>,
+{
   pub fn run_migrations(&mut self) -> Result<Vec<MigrationVersion>, DatabaseError> {
     const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations");
 
@@ -41,6 +45,16 @@ impl DbHandle {
 
   #[cfg(test)]
   pub fn begin_test_transaction(&mut self) -> diesel::QueryResult<()> {
+    use diesel::Connection;
     self.conn.begin_test_transaction()
+  }
+}
+
+#[cfg_attr(feature = "mock", faux::methods)]
+impl From<PooledConnection<ConnectionManager<PgConnection>>>
+  for BaseDbHandle<PooledConnection<ConnectionManager<PgConnection>>>
+{
+  fn from(conn: PooledConnection<ConnectionManager<PgConnection>>) -> Self {
+    BaseDbHandle { conn }
   }
 }

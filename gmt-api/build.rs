@@ -3,16 +3,14 @@ mod src {
   pub mod services;
 }
 
-use std::sync::{Arc, Mutex};
-
-use database::db_handle::DbHandle;
+use database::connection_pool::ConnectionPool;
 use src::services::make_service;
 
 fn main() {
   dotenv::dotenv().ok();
 
-  let db = DbHandle::faux();
-  let db = Arc::new(Mutex::new(db));
+  let db = ConnectionPool::faux();
+
   std::fs::create_dir_all("openapi").unwrap();
 
   let api_service = (make_service(db)).server("http://localhost:3001");
