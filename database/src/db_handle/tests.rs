@@ -46,7 +46,7 @@ fn connection_string() -> String {
 }
 
 #[rstest::fixture]
-pub fn db_handle<'a>(connection_string: &str) -> BaseDbHandle<HandleWrapper> {
+pub fn db_handle(connection_string: &str) -> BaseDbHandle<HandleWrapper> {
   BaseDbHandle::<HandleWrapper>::new(&connection_string).expect("Error creating DbHandle")
 }
 
