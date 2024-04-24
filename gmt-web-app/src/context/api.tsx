@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { main_service } from "../gmt-api";
+import { main_service } from "./services";
 import { useAuthentication } from "./authentication";
 
 const ApiContext = React.createContext<main_service>(
