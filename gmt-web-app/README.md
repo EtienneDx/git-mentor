@@ -1,6 +1,6 @@
-# Getting Started with Create React App
+# GMT Web App
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+This project holds the frontend of the Git Mentor project.
 
 ## Available Scripts
 
@@ -37,6 +37,38 @@ Runs eslint on all typescript files to signal or fix linting.
 
 Formats all of the files using Prettier.
 
+### `npm run make-sdk`
+
+Generates the SDK from the OpenAPI spec file. The SDK is generated in the `src/gmt-api` folder. This script requires the (gmt-api)[../gmt-api] project to be built.
+
+Complete workflow:
+
+```bash
+cd ../gmt-api
+cargo build
+cd ../gmt-web-app
+npm run make-sdk
+```
+
+To use the sdk, you can import it in your code:
+
+```tsx
+import { useApi } from "../../../context/api";
+
+const MyComponent: React.FC = () => {
+  const api = useApi();
+
+  const buttonClicked = () => {
+    const me = await api.getHelloMe();
+
+    console.log(me);
+  }
+
+  return <></>;
+}
+```
+
+See [the generated source](./src/gmt-api/) for more infos (Require local clone).
 
 ## Project Description
 

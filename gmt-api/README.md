@@ -1,10 +1,6 @@
-# Gmt-server
+# GMT-API
 
-The gmt-server crate is the actual ssh and git server used by Git Mentor. It connects to the database to identify the users, their permissions and allows or refuse the ssh request.
-
-## Design choices
-
-The heavy lifting for both git and ssh are managed in external crates. This one only defines the interactions with the database.
+This is the API for the GMT project. It is a RESTful API that allows users to interact with the GMT database. The API is written in Rust using the [poem](https://crates.io/crates/poem) framework, which allows it to export all the APIs as OpenAPI json spec files. These files are in turn used by the frontend to abstract the communication between the two projects.
 
 ## Running the project
 

@@ -21,8 +21,8 @@ The production stack is defined in the `lib/full-stack.ts` file. It contains the
 - GmtSecurityGroup: The security group used by the GmtInstance
 - GmtCodeDeployApp: The CodeDeploy application used to deploy the GMT services
 - GmtCodeDeployDeploymentGroup: The CodeDeploy deployment group used to deploy the GMT services
-- GmtWebsite: The S3 bucket used to host the GMT front-end website
-- GmtWebsiteDistribution: The CloudFront distribution used to serve the GMT front-end website. It redirects all errors to the index.html file to allow for the front-end routing to work. It uses OAI as CDK does not support OAC yet.
+- GmtWebsite: The S3 bucket used to host the GMT frontend website
+- GmtWebsiteDistribution: The CloudFront distribution used to serve the GMT frontend website. It redirects all errors to the index.html file to allow for the frontend routing to work. It uses OAI as CDK does not support OAC yet.
 
 ## Useful commands
 

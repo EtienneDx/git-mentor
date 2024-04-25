@@ -16,9 +16,9 @@ As per best practices and to favor a proper unit testing of the code, it is reco
 
 ## Components
 
-### Front-End
+### Frontend
 
-The front-end will be a simple web application, allowing users to view their repositories and their content. It will also allow them to manage their repositories and their permissions. The front-end will be written in [React](https://reactjs.org/), and hosted on an [S3](https://aws.amazon.com/s3/) bucket, served by [CloudFront](https://aws.amazon.com/cloudfront/).
+The frontend will be a simple web application, allowing users to view their repositories and their content. It will also allow them to manage their repositories and their permissions. The frontend will be written in [React](https://reactjs.org/), and hosted on an [S3](https://aws.amazon.com/s3/) bucket, served by [CloudFront](https://aws.amazon.com/cloudfront/).
 
 ### CI queue
 
@@ -40,7 +40,7 @@ The algorithm for the server is relatively simple:
 
 #### HTTP entrypoint
 
-The server will offer multiple REST APIs to allow the front-end to interact with the git repositories. It will be written in [Rust](https://www.rust-lang.org/).
+The server will offer multiple REST APIs to allow the frontend to interact with the git repositories. It will be written in [Rust](https://www.rust-lang.org/).
 
 The specifics of the HTTP server haven't been decided yet, between the use of an existing framework or the development of a custom one.
 
