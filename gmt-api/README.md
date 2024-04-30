@@ -21,3 +21,21 @@ To run the tests, you can use the following command:
 ```sh
 cargo test
 ```
+
+## Contributing
+
+### Creating a new API
+
+If your API fits within an existing module, you can add it there. If it doesn't, you can create a new module. To do this, you need to create a new module in the `src/services/mod.rs` module. The module should create a struct representing the service and implement the routes with this syntax:
+
+```rust
+#[OpenApi]
+impl HelloService {
+  #[oai(path = "/route", method = "get")]
+  async fn my_route(&self, token: GmtToken) -> Result<Json<MyResponseType>, MyErrorType> {
+    // ...
+  }
+}
+```
+
+Note the token parameter, used to ensure a user is logged in. The `HelloService` provides a set of example routes.

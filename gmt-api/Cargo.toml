@@ -11,8 +11,8 @@ database = { path = "../database" }
 gmt-common = { path = "../gmt-common" }
 tracing = "0.1"
 simple_logger = "4.3.3"
-poem = "1"
-poem-openapi = "2"
+poem = { version = "3", features = ["test"] }
+poem-openapi = "5"
 tokio = { version = "1", features = ["full"] }
 serde = { version = "1", features = ["derive"] }
 thiserror = "1.0.57"
@@ -32,8 +32,8 @@ faux = "^0.1"
 [build-dependencies]
 database = { path = "../database", features = ["mock"] }
 gmt-common = { path = "../gmt-common", features = ["mock"] }
-poem = "1"
-poem-openapi = "2"
+poem = { version = "3", features = ["test"] }
+poem-openapi = "5"
 tokio = { version = "1", features = ["full"] }
 serde = { version = "1", features = ["derive"] }
 thiserror = "1.0.57"

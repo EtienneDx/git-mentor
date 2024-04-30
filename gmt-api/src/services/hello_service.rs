@@ -3,6 +3,8 @@ use poem_openapi::{
   Object, OpenApi,
 };
 
+use crate::security::gmt_token::{GmtToken, TokenError};
+
 pub struct HelloService;
 
 #[derive(Object, serde::Serialize, serde::Deserialize)]
@@ -28,10 +30,19 @@ impl HelloService {
       message: format!("Hello, {}!", req.name),
     })
   }
+
+  #[oai(path = "/hello/me", method = "get")]
+  async fn hello_user(&self, token: GmtToken) -> Result<Json<HelloResponse>, TokenError> {
+    Ok(Json(HelloResponse {
+      message: format!("Hello, {}!", token.get_user()?.username),
+    }))
+  }
 }
 
 #[cfg(test)]
 mod tests {
+  use crate::services::test_utils::valid_token;
+
   use super::*;
   use poem::{http::StatusCode, test::TestClient, Route};
   use poem_openapi::OpenApiService;
@@ -48,25 +59,15 @@ mod tests {
 
   #[rstest]
   #[tokio::test]
-  async fn test_hello() {
-    let service = OpenApiService::new(HelloService, "", "");
-
-    let app = Route::new().nest("/", service);
-
-    let client = TestClient::new(app);
+  async fn test_hello(client: TestClient<Route>) {
     let resp = client.get("/hello").send().await;
-    resp.assert_status(StatusCode::OK);
+    resp.assert_status_is_ok();
     resp.assert_text("Hello world!").await;
   }
 
   #[rstest]
   #[tokio::test]
-  async fn test_hello_name() {
-    let service = OpenApiService::new(HelloService, "", "");
-
-    let app = Route::new().nest("/", service);
-
-    let client = TestClient::new(app);
+  async fn test_hello_name(client: TestClient<Route>) {
     let resp = client
       .post("/hello")
       .body_json(&HelloRequest {
@@ -74,11 +75,43 @@ mod tests {
       })
       .send()
       .await;
-    resp.assert_status(StatusCode::OK);
+    resp.assert_status_is_ok();
     resp
       .assert_json(HelloResponse {
         message: "Hello, world!".to_string(),
       })
       .await;
+  }
+
+  #[rstest]
+  #[tokio::test]
+  async fn test_hello_user_missing_auth_header(client: TestClient<Route>) {
+    let resp = client.get("/hello/me").send().await;
+
+    resp.assert_status(StatusCode::UNAUTHORIZED);
+  }
+
+  #[rstest]
+  #[tokio::test]
+  async fn test_hello_user_invalid_auth_header(client: TestClient<Route>) {
+    let resp = client
+      .get("/hello/me")
+      .header("Authentication", "someinvalidtoken")
+      .send()
+      .await;
+
+    resp.assert_status(StatusCode::UNAUTHORIZED);
+  }
+
+  #[rstest]
+  #[tokio::test]
+  async fn test_hello_user_valid_auth_header(client: TestClient<Route>, valid_token: String) {
+    let resp = client
+      .get("/hello/me")
+      .header("Authentication", valid_token)
+      .send()
+      .await;
+
+    resp.assert_status(StatusCode::UNAUTHORIZED);
   }
 }

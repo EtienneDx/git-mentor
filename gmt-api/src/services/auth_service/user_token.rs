@@ -3,10 +3,10 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
 pub struct UserToken {
-  user_id: i32,
-  username: String,
-  email: String,
-  pubkeys: Vec<String>,
+  pub user_id: i32,
+  pub username: String,
+  pub email: String,
+  pub pubkeys: Vec<String>,
 }
 
 impl From<User> for UserToken {

@@ -5,7 +5,7 @@ use gmt_common::password::PasswordAuth;
 use hmac::{Hmac, Mac};
 use jwt::{Header, SignWithKey, Token};
 use poem_openapi::{payload::Json, OpenApi};
-use sha2::Sha256;
+use sha2::{digest::InvalidLength, Sha256};
 
 use self::user_token::UserToken;
 
@@ -41,8 +41,7 @@ where
       return Err(AuthenticationError::Unauthorized);
     }
 
-    let secret = std::env::var("JWT_SECRET").unwrap_or_else(|_| "secret".to_string());
-    let key: Hmac<Sha256> = Hmac::new_from_slice(secret.as_bytes())?;
+    let key = get_secret_key()?;
 
     let token = Token::new(Header::default(), UserToken::from(user)).sign_with_key(&key)?;
 
@@ -70,8 +69,7 @@ where
     let hash = Pass::generate_hash(&req.password);
     let user = db.create_user(&req.username, &req.email, &hash, None)?;
 
-    let secret = std::env::var("JWT_SECRET").unwrap_or_else(|_| "secret".to_string());
-    let key: Hmac<Sha256> = Hmac::new_from_slice(secret.as_bytes())?;
+    let key = get_secret_key()?;
 
     let token = Token::new(Header::default(), UserToken::from(user)).sign_with_key(&key)?;
 
@@ -79,6 +77,14 @@ where
       token: token.as_str().to_string(),
     }))
   }
+}
+
+pub fn get_secret_key() -> Result<Hmac<Sha256>, InvalidLength> {
+  Hmac::new_from_slice(
+    std::env::var("JWT_SECRET")
+      .unwrap_or_else(|_| "secret".to_string())
+      .as_bytes(),
+  )
 }
 
 #[cfg(test)]
@@ -213,5 +219,11 @@ mod tests {
         assert_eq!(err, e);
       }
     }
+  }
+
+  #[rstest]
+  fn test_get_secret_key() {
+    let key = get_secret_key();
+    assert!(key.is_ok(), "Unable to get encryption key");
   }
 }
