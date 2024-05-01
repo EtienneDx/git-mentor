@@ -4,7 +4,7 @@ import StudentsList from "../features/data-viz/pages/StudentsList";
 const StudentsRouter = () => {
   return (
     <Routes>
-      <Route path="/" Component={StudentsList} />
+      <Route path="/" element={<StudentsList/>} />
     </Routes>
   );
 };
