@@ -8,6 +8,8 @@ In the project directory, you can run:
 
 ### `npm start`
 
+To function, the app needs the backend to be up and running (see [README](../gmt-api/README.md) of gmt-api), and the corresponding sdk to be generated to serve as the api interface (see section below [make-sdk](#npm-run-make-sdk))
+
 Runs the app in the development mode.\
 Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
 

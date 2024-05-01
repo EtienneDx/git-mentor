@@ -6,9 +6,10 @@ This is the API for the GMT project. It is a RESTful API that allows users to in
 
 To run the project, you need to have Rust installed. To install Rust, follow the instructions at [https://www.rust-lang.org/tools/install](https://www.rust-lang.org/tools/install).
 
-You can start the project by running:
+You can launch the database and start the project by running:
 
 ```sh
+docker-compose up -d
 cargo run
 ```
 
