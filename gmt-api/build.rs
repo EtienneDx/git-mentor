@@ -1,7 +1,12 @@
 mod src {
   pub mod error;
+  pub mod security;
   pub mod services;
 }
+
+pub use src::error;
+pub use src::security;
+pub use src::services;
 
 use database::connection_pool::ConnectionPool;
 use src::services::make_service;

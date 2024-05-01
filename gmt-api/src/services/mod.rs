@@ -17,6 +17,9 @@ pub mod hello_service;
 
 pub mod structs;
 
+#[cfg(test)]
+pub mod test_utils;
+
 pub fn make_service<DbPool, Db>(db: DbPool) -> OpenApiService<impl OpenApi, ()>
 where
   Arc<Mutex<Db>>: 'static + Send + Sync,

@@ -72,7 +72,7 @@ pub struct SignUpRequest {
 
 #[derive(ApiResponse, thiserror::Error, Debug, PartialEq, Eq)]
 pub enum AuthenticationError {
-  #[oai(status = 401)]
+  #[oai(status = 403)]
   #[error("The username or password is incorrect")]
   Unauthorized,
   #[oai(status = 409)]

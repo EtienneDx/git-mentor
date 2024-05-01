@@ -4,6 +4,7 @@ use services::make_service;
 use swagger::add_swagger_ui;
 
 pub mod error;
+pub mod security;
 pub mod services;
 pub mod swagger;
 
