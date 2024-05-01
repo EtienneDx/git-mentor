@@ -1,3 +1,5 @@
+// This is a temporary solution while we work on a better way to share types across the application.
+
 export type Group = {
   name: string;
   id: string;

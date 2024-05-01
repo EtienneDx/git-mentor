@@ -13,7 +13,6 @@ const AuthenticatedRoutes: React.FC = () => {
         <Route index element={<UserRoutes />} />
         <Route path={`/${data.user_id}/*`} element={<UserRoutes />} />
         <Route path="/students/*" element={<StudentsRouter />} />
-        <Route path="/about" element={<p>About</p>} />
         <Route path="/signout" element={<Signout />} />
       </Routes>
     </PageLayout>
