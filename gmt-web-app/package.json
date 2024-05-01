@@ -36,7 +36,7 @@
         "lint:fix": "eslint ./src --ext .ts,.tsx --fix",
         "format": "prettier ./src --write",
         "format:check": "prettier ./src",
-        "make-sdk": "openapi --input ../../../../../gmt-api/openapi/main_service.json --output ./src/gmt-api --postfixServices \"\" --name \"main_service\""
+        "make-sdk": "openapi --input ../gmt-api/openapi/main_service.json --output ./src/gmt-api --postfixServices \"\" --name \"main_service\""
     },
     "eslintConfig": {
         "extends": [
