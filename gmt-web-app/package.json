@@ -36,7 +36,7 @@
         "lint:fix": "eslint ./src --ext .ts,.tsx --fix",
         "format": "prettier ./src --write",
         "format:check": "prettier ./src",
-        "make-sdk": "openapi --input ../../../../../gmt-api/openapi/main_service.json --output ./src/gmt-api --postfixServices \"\" --name \"main_service\""
+        "make-sdk": "openapi --input ../gmt-api/openapi/main_service.json --output ./src/gmt-api --postfixServices \"\" --name \"main_service\""
     },
     "eslintConfig": {
         "extends": [
@@ -66,6 +66,7 @@
         }
     },
     "devDependencies": {
+        "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
         "@typescript-eslint/eslint-plugin": "^6.15.0",
         "@typescript-eslint/parser": "^6.15.0",
         "eslint": "^8.56.0",

@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import Box from "../../components/Box";
+import Box from "../../components/atoms/Box";
 import SignupForm from "./components/SignupForm";
 
 const Signup: React.FC = () => {

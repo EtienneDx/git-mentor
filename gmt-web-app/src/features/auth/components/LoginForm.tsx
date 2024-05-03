@@ -2,7 +2,7 @@ import React from "react";
 import { useAuthentication } from "../../../context/authentication";
 import { useApi } from "../../../context/api";
 import { useNavigate } from "react-router-dom";
-import { ApiError } from "../../../gmt-api";
+import { ApiError } from "../../../context/types";
 
 const LoginForm: React.FC = () => {
   const { setToken, stayLoggedIn, setStayLoggedIn } = useAuthentication();
