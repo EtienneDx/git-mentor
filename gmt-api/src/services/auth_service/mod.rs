@@ -4,7 +4,11 @@ use database::connection_pool::ConnectionProvider;
 use gmt_common::password::PasswordAuth;
 use hmac::{Hmac, Mac};
 use jwt::{Header, SignWithKey, Token};
-use poem_openapi::{payload::Json, OpenApi};
+use poem_openapi::{
+  param::Path,
+  payload::{Json, PlainText},
+  OpenApi,
+};
 use sha2::{digest::InvalidLength, Sha256};
 
 use self::user_token::UserToken;
@@ -77,6 +81,25 @@ where
       token: token.as_str().to_string(),
     }))
   }
+
+  /// Returns a \n separated list of keys
+  #[oai(path = "/keys/:username", method = "get")]
+  async fn keys(&self, username: Path<String>) -> Result<PlainText<String>, PubKeysError> {
+    let mut db = self.db.get_connection()?;
+
+    if let Some(user) = db.get_user_by_username(&username.0)? {
+      Ok(PlainText(
+        user
+          .pubkey
+          .iter()
+          .filter_map(|k| k.to_owned())
+          .collect::<Vec<String>>()
+          .join("\n"),
+      ))
+    } else {
+      Err(PubKeysError::UsernameDoesNotExist)
+    }
+  }
 }
 
 pub fn get_secret_key() -> Result<Hmac<Sha256>, InvalidLength> {
@@ -100,7 +123,7 @@ mod tests {
       username: "test".to_string(),
       password: PasswordAuthImpl::generate_hash("password"),
       email: "email".to_string(),
-      pubkey: vec![],
+      pubkey: vec![Some("key1".to_string()), None, Some("key2".to_string())],
     }
   }
 
@@ -225,5 +248,32 @@ mod tests {
   fn test_get_secret_key() {
     let key = get_secret_key();
     assert!(key.is_ok(), "Unable to get encryption key");
+  }
+
+  #[rstest]
+  #[tokio::test]
+  async fn test_get_keys(
+    #[values("valid-username".to_string(), "not-valid-username".to_string())] username: String,
+  ) {
+    let mut pool = ConnectionPool::faux();
+    faux::when!(pool.get_connection).then(move |_| {
+      let mut user_handle = DbHandle::faux();
+      faux::when!(user_handle.get_user_by_username(_)).then(|_| Ok(None));
+      faux::when!(user_handle.get_user_by_username("valid-username"))
+        .then(|_| Ok(Some(get_user())));
+      Ok(user_handle)
+    });
+    let auth_service: AuthService<ConnectionPool, DbHandle, _> =
+      AuthService::<ConnectionPool, DbHandle, PasswordAuthImpl>::new(pool);
+
+    let res = auth_service.keys(Path(username.clone())).await;
+
+    if username == "valid-username" {
+      let res = res.expect("Expected success");
+      assert_eq!(res.0, "key1\nkey2")
+    } else {
+      let err = res.expect_err("Expected error");
+      assert_eq!(err, PubKeysError::UsernameDoesNotExist)
+    }
   }
 }

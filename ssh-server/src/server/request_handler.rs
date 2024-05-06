@@ -15,6 +15,7 @@ use crate::{
   handler::HandlerResult,
   user::User,
   wrapper::{HandleWrapper, WrappedHandle},
+  HandlerType,
 };
 
 pub struct RequestHandler<A, U, CId, HW>
@@ -25,8 +26,7 @@ where
   HW: HandleWrapper<ChannelId = CId> + 'static,
 {
   authenticator: Arc<A>,
-  handlers:
-    Vec<Arc<Box<dyn crate::handler::Handler<ChannelId = CId, HandleWrapper = HW, User = U>>>>,
+  handlers: Vec<Arc<HandlerType<CId, HW, U>>>,
   user: Option<A::User>,
   processes: HashMap<ChannelId, Pin<Box<dyn AsyncWrite + Sync + Send + 'static>>>,
 }
@@ -40,9 +40,7 @@ where
 {
   pub fn new(
     authenticator: Arc<A>,
-    handlers: Vec<
-      Arc<Box<dyn crate::handler::Handler<ChannelId = CId, HandleWrapper = HW, User = U>>>,
-    >,
+    handlers: Vec<Arc<HandlerType<CId, HW, U>>>,
     _: Option<std::net::SocketAddr>,
   ) -> Self {
     RequestHandler {

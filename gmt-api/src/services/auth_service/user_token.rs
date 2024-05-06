@@ -6,7 +6,6 @@ pub struct UserToken {
   pub user_id: i32,
   pub username: String,
   pub email: String,
-  pub pubkeys: Vec<String>,
 }
 
 impl From<User> for UserToken {
@@ -15,13 +14,6 @@ impl From<User> for UserToken {
       user_id: user.id,
       username: user.username,
       email: user.email,
-      pubkeys: user
-        .pubkey
-        .iter()
-        .filter(|x| x.is_some())
-        .cloned()
-        .map(|x| x.unwrap())
-        .collect(),
     }
   }
 }
@@ -39,7 +31,7 @@ mod tests {
       username: "john_doe".to_string(),
       password: "password".to_string(),
       email: "john.doe@example.com".to_string(),
-      pubkey: vec![Some("key1".to_string()), None, Some("key2".to_string())],
+      pubkey: vec![],
     };
 
     let user_token: UserToken = user.into();
@@ -47,6 +39,5 @@ mod tests {
     assert_eq!(user_token.user_id, 1);
     assert_eq!(user_token.username, "john_doe");
     assert_eq!(user_token.email, "john.doe@example.com");
-    assert_eq!(user_token.pubkeys, vec!["key1", "key2"]);
   }
 }

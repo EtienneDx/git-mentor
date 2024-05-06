@@ -9,7 +9,6 @@ pub fn valid_token() -> String {
     user_id: 1,
     username: "bob".to_string(),
     email: "test@test.com".to_string(),
-    pubkeys: vec![],
   };
 
   let key = get_secret_key().expect("Unable to get secret key");

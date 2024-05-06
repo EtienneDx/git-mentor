@@ -22,7 +22,7 @@ pub(crate) fn parse_command(command: &str) -> Result<(String, String), GitProces
   }
 
   let command = parts
-    .get(0)
+    .first()
     .ok_or(GitProcessError::InvalidCommandError)?
     .to_owned();
   let repo_path = parts

@@ -14,6 +14,8 @@ use crate::{
   wrapper::{HandleWrapper, WrappedHandle},
 };
 
+pub type HandlerType<CId, HW, U> = Box<dyn Handler<ChannelId = CId, HandleWrapper = HW, User = U>>;
+
 pub struct SshServer<A, U, CId, HW>
 where
   A: Authenticator<User = U>,
@@ -22,7 +24,7 @@ where
   HW: HandleWrapper<ChannelId = CId> + 'static,
 {
   authenticator: Arc<A>,
-  handlers: Vec<Arc<Box<dyn Handler<ChannelId = CId, HandleWrapper = HW, User = U>>>>,
+  handlers: Vec<Arc<HandlerType<CId, HW, U>>>,
 }
 
 /// A Git server implementation that uses an authenticator and repository provider.
