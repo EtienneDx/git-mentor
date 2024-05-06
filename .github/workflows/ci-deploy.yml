@@ -1,0 +1,35 @@
+name: Ci-Deploy
+
+on:
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: gmt-web-app
+      
+      - name: Install cdk
+        run : npm install -g aws-cdk
+
+      - name: Build rust projects
+        run: cargo build --release
+
+      - name: Make sdk
+        run: npm run make-sdk
+        working-directory: gmt-web-app
+      
+      - name: Build front
+        run: npm run build
+        working-directory: gmt-web-app
+
+      - name: Deploy
+        run: cdk deploy GmtCdkStack-ci --require-approval never
+        working-directory: gmt-cdk

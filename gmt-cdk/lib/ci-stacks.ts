@@ -8,12 +8,13 @@ import * as iam from 'aws-cdk-lib/aws-iam';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as cw from 'aws-cdk-lib/aws-cloudwatch';
 import * as cwactions from 'aws-cdk-lib/aws-cloudwatch-actions';
+import * as s3deploy from 'aws-cdk-lib/aws-s3-deployment';
 
 interface CiStackProps extends cdk.StackProps {
-  pullRequestId: number;
+  pullRequestId: string;
 }
 
-export class CiStackFront extends cdk.Stack {
+export class CiStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: CiStackProps) {
     super(scope, id, props);
 
@@ -35,15 +36,6 @@ export class CiStackFront extends cdk.Stack {
       publicReadAccess: false,
     });
 
-    // Cloudfront distribution
-    let distribution = new cloudfront.Distribution(this, 'Frontend Distribution', {
-      defaultBehavior: { 
-        origin: new origins.S3Origin(bucket, {
-          originShieldEnabled: false,
-        }),
-      },
-    });
-
     // Cloudwatch group
     let group = new cwlogs.LogGroup(this, 'Frontend Log Group', {
       logGroupName: `/git-mentor/pulls/${props.pullRequestId}`,
@@ -58,25 +50,6 @@ export class CiStackFront extends cdk.Stack {
 
     group.grantWrite(role);
     artefactsBucket.grantReadWrite(role);
-
-    // Outputs
-    new cdk.CfnOutput(this, 'DistributionDomainName', {
-      value: distribution.distributionDomainName,
-    });
-
-    // Deployments will be made externally
-  }
-}
-
-export class CiStackBack extends cdk.Stack {
-  constructor(scope: Construct, id: string, props: CiStackProps) {
-    super(scope, id, props);
-
-    // Retrieve role
-    let role = iam.Role.fromRoleArn(this, 'Backend Role', `arn:aws:iam::${this.account}:role/gmt-pull-ci-role-${props.pullRequestId}`);
-
-    // Retrieve group
-    let group = cwlogs.LogGroup.fromLogGroupName(this, 'Backend Log Group', `/git-mentor/pulls/${props.pullRequestId}`);
 
     // VPC
     let vpc = new ec2.Vpc(this, 'Backend VPC', {
@@ -119,6 +92,22 @@ export class CiStackBack extends cdk.Stack {
       ),
     });
 
+    // Cloudfront distribution
+    let distribution = new cloudfront.Distribution(this, 'Frontend Distribution', {
+      defaultBehavior: { 
+        origin: new origins.S3Origin(bucket, {
+          originShieldEnabled: false,
+        }),
+      },
+      additionalBehaviors: {
+        '/api/*': {
+          origin: new origins.HttpOrigin(instance.instancePublicDnsName),
+          cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
+          allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
+        },
+      },
+    });
+
     // Open port ssh and http
     instance.connections.allowFromAnyIpv4(ec2.Port.tcp(22));
     instance.connections.allowFromAnyIpv4(ec2.Port.tcp(80));
@@ -141,7 +130,29 @@ export class CiStackBack extends cdk.Stack {
 
     alarm.addAlarmAction(new cwactions.Ec2Action(cwactions.Ec2InstanceAction.STOP));
 
+    // Deployments
+
+    //  - Upload frontend to S3
+    new s3deploy.BucketDeployment(this, 'Deploy Frontend', {
+      sources: [s3deploy.Source.asset('../gmt-web-app/build')],
+      destinationBucket: bucket,
+      distribution,
+      logGroup: group,
+      logRetention: cwlogs.RetentionDays.ONE_WEEK,
+    });
+
+    //  - Upload artefacts to S3
+    new s3deploy.BucketDeployment(this, 'Deploy Artefacts', {
+      sources: [s3deploy.Source.asset('../target/release/')],
+      destinationBucket: artefactsBucket,
+      logGroup: group,
+    });
+
     // Outputs
+    new cdk.CfnOutput(this, 'DistributionDomainName', {
+      value: distribution.distributionDomainName,
+    });
+
     new cdk.CfnOutput(this, 'InstanceUrl', {
       value: instance.instancePublicDnsName,
     });
