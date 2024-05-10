@@ -26,6 +26,8 @@ export class CiStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       autoDeleteObjects: true,
       publicReadAccess: true,
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ACLS,
+      accessControl: s3.BucketAccessControl.BUCKET_OWNER_FULL_CONTROL,
     });
 
     // artefacts S3 bucket
@@ -93,8 +95,8 @@ export class CiStack extends cdk.Stack {
         ec2.InitCommand.shellCommand('sudo -u postgres psql -c "CREATE DATABASE gmt"'),
       ),
       blockDevices: [{
-        deviceName: '/gmt',
-        volume: ec2.BlockDeviceVolume.ebs(4),
+        deviceName: '/dev/sda1',
+        volume: ec2.BlockDeviceVolume.ebs(16),
       }],
     });
     cdk.Tags.of(instance).add('GMT-CI', `pull-${props.pullRequestId}`);

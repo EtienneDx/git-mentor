@@ -2,35 +2,35 @@ version: 0.0
 os: linux
 files:
   - source: /target/release/gmt-server
-    destination: /gmt/bin/gmt-server
+    destination: /dev/sda1/gmt/bin/gmt-server
   - source: /target/release/gmt-api
-    destination: /gmt/bin/gmt-api
+    destination: /dev/sda1/gmt/bin/gmt-api
   - source: /app-spec/gmt-server.service
     destination: /etc/systemd/system/gmt-server.service
   - source: /app-spec/gmt-api.service
     destination: /etc/systemd/system/gmt-api.service
   - source: /app-spec/before_install.sh
-    destination: /gmt/bin/before_install.sh
+    destination: /dev/sda1/gmt/bin/before_install.sh
   - source: /app-spec/after_install.sh
-    destination: /gmt/bin/after_install.sh
+    destination: /dev/sda1/gmt/bin/after_install.sh
   - source: /app-spec/start.sh
-    destination: /gmt/bin/start.sh
+    destination: /dev/sda1/gmt/bin/start.sh
   - source: /app-spec/validate.sh
-    destination: /gmt/bin/validate.sh
+    destination: /dev/sda1/gmt/bin/validate.sh
 hooks:
   BeforeInstall:
-    - location: <script_location>
-      timeout: <timeout_in_seconds>
-      runas: <user_to_run_script_as>
+    - location: /dev/sda1/gmt/bin/before_install.sh
+      timeout: 300
+      runas: root
   AfterInstall:
-    - location: <script_location>
-      timeout: <timeout_in_seconds>
-      runas: <user_to_run_script_as>
+    - location: /dev/sda1/gmt/bin/after_install.sh
+      timeout: 300
+      runas: root
   ApplicationStart:
-    - location: <script_location>
-      timeout: <timeout_in_seconds>
-      runas: <user_to_run_script_as>
+    - location: /dev/sda1/gmt/bin/start.sh
+      timeout: 300
+      runas: root
   ValidateService:
-    - location: <script_location>
-      timeout: <timeout_in_seconds>
-      runas: <user_to_run_script_as>
+    - location: /dev/sda1/gmt/bin/validate.sh
+      timeout: 300
+      runas: root
