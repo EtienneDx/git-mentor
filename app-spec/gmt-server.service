@@ -1,0 +1,13 @@
+[Unit]
+Description=GMT Server
+After=network.target
+
+[Service]
+ExecStart=/gmt/bin/gmt-server
+WorkingDirectory=/gmt
+User=ec2_user
+Group=ec2_user
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

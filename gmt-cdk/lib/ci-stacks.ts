@@ -9,6 +9,7 @@ import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as cw from 'aws-cdk-lib/aws-cloudwatch';
 import * as cwactions from 'aws-cdk-lib/aws-cloudwatch-actions';
 import * as s3deploy from 'aws-cdk-lib/aws-s3-deployment';
+import * as cd from 'aws-cdk-lib/aws-codedeploy';
 
 interface CiStackProps extends cdk.StackProps {
   pullRequestId: string;
@@ -77,19 +78,49 @@ export class CiStack extends cdk.Stack {
           'EOF\n'),
         // Start cloudwatch log agent
         ec2.InitCommand.shellCommand('systemctl start awslogsd'),
-        // download artefacts from S3
-        ec2.InitCommand.shellCommand('aws s3 cp s3://gmt-pull-ci-artefacts-bucket-${props.pullRequestId} /home/ec2-user/ --recursive'),
+        // Install codedeploy agent
+        ec2.InitPackage.yum('ruby'),
+        ec2.InitPackage.yum('wget'),
+        ec2.InitCommand.shellCommand('cd /home/ec2-user'),
+        ec2.InitCommand.shellCommand('wget https://aws-codedeploy-eu-west-3.s3.eu-west-3.amazonaws.com/latest/install'),
+        ec2.InitCommand.shellCommand('chmod +x ./install'),
+        ec2.InitCommand.shellCommand('./install auto'),
         // Install PostgreSQL
         ec2.InitPackage.yum('postgresql-server'),
         // Start PostgreSQL
         ec2.InitCommand.shellCommand('service postgresql start'),
         // Create database
         ec2.InitCommand.shellCommand('sudo -u postgres psql -c "CREATE DATABASE gmt"'),
-        // Start backend api server
-        ec2.InitCommand.shellCommand('cd /home/ec2-user && ./gmt-api'),
-        // Start gmt git server
-        ec2.InitCommand.shellCommand('cd /home/ec2-user && ./gmt-server'),
       ),
+      blockDevices: [{
+        deviceName: '/gmt',
+        volume: ec2.BlockDeviceVolume.ebs(4),
+      }],
+    });
+    cdk.Tags.of(instance).add('GMT-CI', `pull-${props.pullRequestId}`);
+
+    // code deploy application
+    let apiApp = new cd.ServerApplication(this, 'API Application', {
+      applicationName: `gmt-pull-${props.pullRequestId}-api-application`,
+    });
+    let gitApp = new cd.ServerApplication(this, 'Git Application', {
+      applicationName: `gmt-pull-${props.pullRequestId}-git-application`,
+    });
+
+    // code deploy group
+    let apiGroup = new cd.ServerDeploymentGroup(this, 'API Deployment Group', {
+      application: apiApp,
+      deploymentGroupName: `gmt-pull-${props.pullRequestId}-api-deployment-group`,
+      ec2InstanceTags: new cd.InstanceTagSet({
+        'GMT-CI': [`pull-${props.pullRequestId}`],
+      }),
+    });
+    let gitGroup = new cd.ServerDeploymentGroup(this, 'Git Deployment Group', {
+      application: gitApp,
+      deploymentGroupName: `gmt-pull-${props.pullRequestId}-git-deployment-group`,
+      ec2InstanceTags: new cd.InstanceTagSet({
+        'GMT-CI': [`pull-${props.pullRequestId}`],
+      }),
     });
 
     // Cloudfront distribution
@@ -139,13 +170,6 @@ export class CiStack extends cdk.Stack {
       distribution,
       logGroup: group,
       logRetention: cwlogs.RetentionDays.ONE_WEEK,
-    });
-
-    //  - Upload artefacts to S3
-    new s3deploy.BucketDeployment(this, 'Deploy Artefacts', {
-      sources: [s3deploy.Source.asset('../target/release/')],
-      destinationBucket: artefactsBucket,
-      logGroup: group,
     });
 
     // Outputs

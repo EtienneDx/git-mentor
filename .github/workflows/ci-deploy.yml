@@ -33,3 +33,5 @@ jobs:
       - name: Deploy
         run: cdk deploy GmtCdkStack-ci --require-approval never
         working-directory: gmt-cdk
+        env:
+          GH_PULL_ID: ${{ github.event.pull_request.number }}
