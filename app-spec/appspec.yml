@@ -1,36 +1,32 @@
 version: 0.0
 os: linux
 files:
-  - source: /target/release/gmt-server
+  - source: gmt-server
     destination: /gmt/bin/gmt-server
-  - source: /target/release/gmt-api
+  - source: gmt-api
     destination: /gmt/bin/gmt-api
-  - source: /app-spec/gmt-server.service
-    destination: /etc/systemd/system/gmt-server.service
-  - source: /app-spec/gmt-api.service
-    destination: /etc/systemd/system/gmt-api.service
-  - source: /app-spec/before_install.sh
-    destination: /gmt/bin/before_install.sh
-  - source: /app-spec/after_install.sh
-    destination: /gmt/bin/after_install.sh
-  - source: /app-spec/start.sh
-    destination: /gmt/bin/start.sh
-  - source: /app-spec/validate.sh
-    destination: /gmt/bin/validate.sh
+  - source: app-spec/gmt-server.service
+    destination: /etc/systemd/system
+  - source: app-spec/gmt-api.service
+    destination: /etc/systemd/system
 hooks:
   BeforeInstall:
-    - location: /gmt/bin/before_install.sh
+    - location: app-spec/before_install.sh
       timeout: 300
       runas: root
   AfterInstall:
-    - location: /gmt/bin/after_install.sh
+    - location: app-spec/after_install.sh
+      timeout: 300
+      runas: root
+  ApplicationStop:
+    - location: app-spec/stop.sh
       timeout: 300
       runas: root
   ApplicationStart:
-    - location: /gmt/bin/start.sh
+    - location: app-spec/start.sh
       timeout: 300
       runas: root
   ValidateService:
-    - location: /gmt/bin/validate.sh
+    - location: app-spec/validate.sh
       timeout: 300
       runas: root

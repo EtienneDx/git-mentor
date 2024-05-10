@@ -28,6 +28,8 @@ export class CiStack extends cdk.Stack {
       publicReadAccess: true,
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ACLS,
       accessControl: s3.BucketAccessControl.BUCKET_OWNER_FULL_CONTROL,
+      websiteIndexDocument: 'index.html',
+      websiteErrorDocument: 'index.html',
     });
 
     // artefacts S3 bucket
@@ -56,30 +58,52 @@ export class CiStack extends cdk.Stack {
 
     // VPC
     let vpc = new ec2.Vpc(this, 'Backend VPC', {
-      maxAzs: 2,
+      maxAzs: 1,
+      subnetConfiguration: [
+        {
+          cidrMask: 24,
+          name: 'Public',
+          subnetType: ec2.SubnetType.PUBLIC,
+        },
+      ],
     });
 
     // ec2 instance
     let instance = new ec2.Instance(this, 'Backend Instance', {
       instanceType: ec2.InstanceType.of(ec2.InstanceClass.T2, ec2.InstanceSize.MICRO),
-      machineImage: new ec2.AmazonLinuxImage(),
+      machineImage: new ec2.AmazonLinuxImage({
+        generation: ec2.AmazonLinuxGeneration.AMAZON_LINUX_2,
+      }),
+      associatePublicIpAddress: true,
       vpc: vpc,
       role: role,
       init: ec2.CloudFormationInit.fromElements(
         // Install cloudwatch log agent
-        ec2.InitPackage.yum('awslogs'),
+        ec2.InitPackage.yum('amazon-cloudwatch-agent'),
         // Configure cloudwatch log agent
-        ec2.InitCommand.shellCommand('cat <<EOF > /etc/awslogs/awslogs.conf\n' +
-          '[general]\n' +
-          'state_file = /var/lib/awslogs/agent-state\n' +
-          '\n' +
-          '[/var/log/messages]\n' +
-          'log_group_name = ' + group.logGroupName + '\n' +
-          'log_stream_name = {instance_id}\n' +
-          'datetime_format = %b %d %H:%M:%S\n' +
-          'EOF\n'),
+        ec2.InitCommand.shellCommand(`cat <<EOF > /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json
+        {
+          "logs": {
+            "logs_collected": {
+              "files": {
+                "collect_list": [
+                  {
+                    "file_path": "/var/log/gmt-server.log",
+                    "log_group_name": "/git-mentor/pulls/${props.pullRequestId}",
+                    "log_stream_name": "{instance_id}"
+                  },
+                  {
+                    "file_path": "/var/log/gmt-api.log",
+                    "log_group_name": "/git-mentor/pulls/${props.pullRequestId}",
+                    "log_stream_name": "{instance_id}"
+                  }
+                ]
+              }
+            }
+          }
+        }`),
         // Start cloudwatch log agent
-        ec2.InitCommand.shellCommand('systemctl start awslogsd'),
+        ec2.InitCommand.shellCommand('amazon-cloudwatch-agent-ctl -a start'),
         // Install codedeploy agent
         ec2.InitPackage.yum('ruby'),
         ec2.InitPackage.yum('wget'),
@@ -143,6 +167,7 @@ export class CiStack extends cdk.Stack {
     // Open port ssh and http
     instance.connections.allowFromAnyIpv4(ec2.Port.tcp(22));
     instance.connections.allowFromAnyIpv4(ec2.Port.tcp(80));
+    instance.connections.allowFromAnyIpv4(ec2.Port.tcp(443));
 
     // Create alarm on instance running more than 30 minutes to automatically stop it
     let metric = new cw.Metric({
@@ -151,12 +176,12 @@ export class CiStack extends cdk.Stack {
       dimensionsMap: {
         InstanceId: instance.instanceId,
       },
-      period: cdk.Duration.minutes(30),
+      period: cdk.Duration.minutes(5),
     });
     let alarm = new cw.Alarm(this, 'Backend Alarm', {
       metric: metric,
       threshold: 0,
-      evaluationPeriods: 1,
+      evaluationPeriods: 6,
       comparisonOperator: cw.ComparisonOperator.GREATER_THAN_THRESHOLD,
     });
 
@@ -178,6 +203,10 @@ export class CiStack extends cdk.Stack {
 
     new cdk.CfnOutput(this, 'InstanceUrl', {
       value: instance.instancePublicDnsName,
+    });
+
+    new cdk.CfnOutput(this, 'InstanceId', {
+      value: instance.instanceId,
     });
   }
 }
