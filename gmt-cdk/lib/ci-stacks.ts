@@ -88,16 +88,15 @@ export class CiStack extends cdk.Stack {
         ec2.InitCommand.shellCommand('chmod +x ./install'),
         ec2.InitCommand.shellCommand('./install auto'),
         // Install PostgreSQL
-        ec2.InitPackage.yum('postgresql-server'),
+        ec2.InitCommand.shellCommand('amazon-linux-extras install postgresql14'),
+        ec2.InitCommand.shellCommand('yum install -y postgresql-server'),
+        // Initialize PostgreSQL
+        ec2.InitCommand.shellCommand('postgresql-setup initdb'),
         // Start PostgreSQL
-        ec2.InitCommand.shellCommand('service postgresql start'),
+        ec2.InitCommand.shellCommand('systemctl start postgresql'),
         // Create database
         ec2.InitCommand.shellCommand('sudo -u postgres psql -c "CREATE DATABASE gmt"'),
       ),
-      blockDevices: [{
-        deviceName: '/dev/sda1',
-        volume: ec2.BlockDeviceVolume.ebs(16),
-      }],
     });
     cdk.Tags.of(instance).add('GMT-CI', `pull-${props.pullRequestId}`);
 

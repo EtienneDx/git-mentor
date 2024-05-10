@@ -62,7 +62,27 @@ jobs:
         working-directory: gmt-cdk
 
       - name: Deploy
-        run: cdk deploy GmtCdkStack-ci --require-approval never
+        run: cdk deploy GmtCdkStack-ci-${{ github.event.pull_request.number }} --require-approval never
         working-directory: gmt-cdk
         env:
           GH_PULL_ID: ${{ github.event.pull_request.number }}
+
+      - name: Bundle back-end application
+        run: |
+          mkdir -p dist
+          cp target/release/gmt-server dist/gmt-server
+          cp target/release/gmt-api dist/gmt-api
+          cp -r app-spec dist
+          cp app-spec/appspec.yml dist
+          zip -r app.zip dist
+
+      - name: Upload application to S3
+        run: aws s3 cp app.zip s3://gmt-pull-ci-artefacts-bucket-${{ github.event.pull_request.number }}/app.zip
+
+      - name: Deploy application to CodeDeploy
+        run: aws deploy create-deployment
+          --application-name gmt-pull-${{ github.event.pull_request.number }}-api-application 
+          --deployment-group-name gmt-pull-${{ github.event.pull_request.number }}-api-deployment-group
+          --s3-location bucket=gmt-pull-ci-artefacts-bucket-${{ github.event.pull_request.number }},key=app.zip,bundleType=zip
+          --deployment-config-name CodeDeployDefault.AllAtOnce
+          --description "Deploying app from PR ${{ github.event.pull_request.number }}"
