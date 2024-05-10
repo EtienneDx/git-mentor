@@ -168,8 +168,6 @@ export class CiStack extends cdk.Stack {
       sources: [s3deploy.Source.asset('../gmt-web-app/build')],
       destinationBucket: bucket,
       distribution,
-      logGroup: group,
-      logRetention: cwlogs.RetentionDays.ONE_WEEK,
     });
 
     // Outputs

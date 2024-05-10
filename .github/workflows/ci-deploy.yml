@@ -4,9 +4,16 @@ on:
   pull_request:
     branches: [ "master" ]
 
+env:
+  AWS_REGION: eu-west-3
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write   # This is required for requesting the JWT
+      contents: read    # This is required for actions/checkout
 
     steps:
       - name: Checkout code
@@ -29,6 +36,17 @@ jobs:
       - name: Build front
         run: npm run build
         working-directory: gmt-web-app
+        
+      - name: configure aws credentials
+        uses: aws-actions/configure-aws-credentials@v1.7.0
+        with:
+          role-to-assume: arn:aws:iam::446114629971:role/GithubActionRole
+          role-session-name: GitHub_to_AWS_via_FederatedOIDC
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Install cdk dependencies
+        run: npm install
+        working-directory: gmt-cdk
 
       - name: Deploy
         run: cdk deploy GmtCdkStack-ci --require-approval never
