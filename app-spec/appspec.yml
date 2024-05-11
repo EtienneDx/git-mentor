@@ -2,13 +2,15 @@ version: 0.0
 os: linux
 files:
   - source: gmt-server
-    destination: /gmt/bin/gmt-server
+    destination: /gmt/bin
   - source: gmt-api
-    destination: /gmt/bin/gmt-api
+    destination: /gmt/bin
   - source: app-spec/gmt-server.service
     destination: /etc/systemd/system
   - source: app-spec/gmt-api.service
     destination: /etc/systemd/system
+  - source: app-spec/.env
+    destination: /gmt/bin
 hooks:
   BeforeInstall:
     - location: app-spec/before_install.sh

@@ -72,7 +72,7 @@ export class CiStack extends cdk.Stack {
     let instance = new ec2.Instance(this, 'Backend Instance', {
       instanceType: ec2.InstanceType.of(ec2.InstanceClass.T2, ec2.InstanceSize.MICRO),
       machineImage: new ec2.AmazonLinuxImage({
-        generation: ec2.AmazonLinuxGeneration.AMAZON_LINUX_2,
+        generation: ec2.AmazonLinuxGeneration.AMAZON_LINUX_2023,
       }),
       associatePublicIpAddress: true,
       vpc: vpc,
@@ -105,19 +105,21 @@ export class CiStack extends cdk.Stack {
         // Start cloudwatch log agent
         ec2.InitCommand.shellCommand('amazon-cloudwatch-agent-ctl -a start'),
         // Install codedeploy agent
-        ec2.InitPackage.yum('ruby'),
+        ec2.InitCommand.shellCommand('yum update -y'),
+        ec2.InitCommand.shellCommand('yum install -y ruby'),
         ec2.InitPackage.yum('wget'),
         ec2.InitCommand.shellCommand('cd /home/ec2-user'),
         ec2.InitCommand.shellCommand('wget https://aws-codedeploy-eu-west-3.s3.eu-west-3.amazonaws.com/latest/install'),
         ec2.InitCommand.shellCommand('chmod +x ./install'),
         ec2.InitCommand.shellCommand('./install auto'),
         // Install PostgreSQL
-        ec2.InitCommand.shellCommand('amazon-linux-extras install postgresql14'),
-        ec2.InitCommand.shellCommand('yum install -y postgresql-server'),
+        ec2.InitCommand.shellCommand('dnf install -y postgresql15 postgresql15-server postgresql15-contrib'),
         // Initialize PostgreSQL
         ec2.InitCommand.shellCommand('postgresql-setup initdb'),
         // Start PostgreSQL
         ec2.InitCommand.shellCommand('systemctl start postgresql'),
+        // Create user
+        ec2.InitCommand.shellCommand('sudo -u postgres psql -c "CREATE USER admin_user WITH PASSWORD \'admin\'"'),
         // Create database
         ec2.InitCommand.shellCommand('sudo -u postgres psql -c "CREATE DATABASE gmt"'),
       ),

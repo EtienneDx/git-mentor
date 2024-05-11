@@ -24,6 +24,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           cache-on-failure: true
+          cache-all-crates: true
 
       - uses: actions/setup-node@v4
         with:
@@ -104,7 +105,7 @@ jobs:
         uses: KeisukeYamashita/create-comment@v1
         continue-on-error: true
         with:
-          check-only-first-line: true
+          check-only-first-line: "true"
           comment: |
             Deployment successful.
 

@@ -5,8 +5,8 @@ After=network.target
 [Service]
 ExecStart=/gmt/bin/gmt-server
 WorkingDirectory=/gmt
-User=ec2_user
-Group=ec2_user
+User=ec2-user
+Group=ec2-user
 Restart=always
 
 [Install]
