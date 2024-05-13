@@ -124,6 +124,8 @@ export class CiStack extends cdk.Stack {
         ec2.InitCommand.shellCommand('sudo -u postgres psql -c "CREATE DATABASE gmt"'),
         // Allow user to access database
         ec2.InitCommand.shellCommand('sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE gmt TO admin_user"'),
+        ec2.InitCommand.shellCommand('sudo -u postgres psql -c "GRANT ALL ON SCHEMA public TO admin_user"'),
+        ec2.InitCommand.shellCommand('sudo -u postgres psql -c "ALTER DATABASE gmt OWNER TO admin_user"'),
         // Allow usage of password
         ec2.InitCommand.shellCommand('echo "host all all 127.0.0.1/32 md5" >> /var/lib/pgsql/data/pg_hba.conf'),
         // Restart PostgreSQL

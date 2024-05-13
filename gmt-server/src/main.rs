@@ -16,6 +16,8 @@ async fn main() {
     .unwrap();
   info!("Logger initialized");
 
+  dotenv::dotenv().ok();
+
   let auth = DbAuthenticator::new();
   let repository_provider = DbRepositoryProvider::new();
   let config = GitHandlerConfig {
@@ -24,8 +26,13 @@ async fn main() {
   let mut server = SshServer::new(auth);
   server.add_handler(GitHandler::new(config, repository_provider));
 
+  let port = std::env::var("SSH_PORT")
+    .map(|port| port.parse().expect("Invalid port number"))
+    .ok()
+    .unwrap_or_else(|| 2222);
+
   server
-    .listen(2222)
+    .listen(port)
     .await
     .expect("Unexpected error while running server");
 }
