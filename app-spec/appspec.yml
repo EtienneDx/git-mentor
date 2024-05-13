@@ -10,7 +10,7 @@ files:
   - source: app-spec/gmt-api.service
     destination: /etc/systemd/system
   - source: app-spec/.env
-    destination: /gmt/bin
+    destination: /gmt
 hooks:
   BeforeInstall:
     - location: app-spec/before_install.sh

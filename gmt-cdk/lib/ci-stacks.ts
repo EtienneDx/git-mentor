@@ -113,7 +113,7 @@ export class CiStack extends cdk.Stack {
         ec2.InitCommand.shellCommand('chmod +x ./install'),
         ec2.InitCommand.shellCommand('./install auto'),
         // Install PostgreSQL
-        ec2.InitCommand.shellCommand('dnf install -y postgresql15 postgresql15-server postgresql15-contrib'),
+        ec2.InitCommand.shellCommand('dnf install -y postgresql15 postgresql15-server libpq'),
         // Initialize PostgreSQL
         ec2.InitCommand.shellCommand('postgresql-setup initdb'),
         // Start PostgreSQL
@@ -193,7 +193,7 @@ export class CiStack extends cdk.Stack {
 
     //  - Upload frontend to S3
     new s3deploy.BucketDeployment(this, 'Deploy Frontend', {
-      sources: [s3deploy.Source.asset('../gmt-web-app/build')],
+      sources: [s3deploy.Source.asset('../gmt-web-app/build'), s3deploy.Source.asset('../gmt-web-app/prod')],
       destinationBucket: bucket,
       distribution,
     });
