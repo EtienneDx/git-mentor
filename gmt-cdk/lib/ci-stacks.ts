@@ -122,6 +122,12 @@ export class CiStack extends cdk.Stack {
         ec2.InitCommand.shellCommand('sudo -u postgres psql -c "CREATE USER admin_user WITH PASSWORD \'admin\'"'),
         // Create database
         ec2.InitCommand.shellCommand('sudo -u postgres psql -c "CREATE DATABASE gmt"'),
+        // Allow user to access database
+        ec2.InitCommand.shellCommand('sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE gmt TO admin_user"'),
+        // Allow usage of password
+        ec2.InitCommand.shellCommand('echo "host all all 127.0.0.1/32 md5" >> /var/lib/pgsql/data/pg_hba.conf'),
+        // Restart PostgreSQL
+        ec2.InitCommand.shellCommand('systemctl restart postgresql'),
       ),
     });
     cdk.Tags.of(instance).add('GMT-CI', `pull-${props.pullRequestId}`);
