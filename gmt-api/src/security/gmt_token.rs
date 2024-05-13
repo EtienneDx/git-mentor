@@ -50,7 +50,6 @@ mod tests {
       user_id: 1,
       username: "john_doe".to_string(),
       email: "john.doe@example.com".to_string(),
-      pubkeys: vec![],
     };
 
     Token::new(Header::default(), UserToken::from(user))
@@ -68,6 +67,5 @@ mod tests {
     assert_eq!(user.user_id, 1);
     assert_eq!(user.username, "john_doe");
     assert_eq!(user.email, "john.doe@example.com");
-    assert_eq!(user.pubkeys.len(), 0);
   }
 }

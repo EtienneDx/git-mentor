@@ -92,3 +92,15 @@ impl<T> From<PoisonError<T>> for AuthenticationError {
     AuthenticationError::InternalServerError
   }
 }
+
+#[derive(ApiResponse, thiserror::Error, Debug, PartialEq, Eq)]
+pub enum PubKeysError {
+  #[oai(status = 404)]
+  #[error("Username does not exist")]
+  UsernameDoesNotExist,
+  #[oai(status = 500)]
+  #[error("Internal Server Error")]
+  InternalServerError,
+}
+
+error_from!(DatabaseError, PubKeysError, InternalServerError);

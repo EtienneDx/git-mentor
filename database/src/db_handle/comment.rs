@@ -171,7 +171,7 @@ where
   ) -> Result<Comment, DatabaseError> {
     let new_comment = NewComment {
       repository_id,
-      commit_hash: commit_hash,
+      commit_hash,
       respond_to: None,
       file_path: None,
       message,
