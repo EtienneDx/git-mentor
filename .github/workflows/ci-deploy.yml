@@ -109,4 +109,7 @@ jobs:
           comment: |
             Deployment successful.
 
-            You can access the application at [https://${{ steps.retrieve_domain.outputs.domain_name }}/](https://${{ steps.retrieve_domain.outputs.domain_name }}/)
+            You can [start](https://github.com/EtienneDx/git-mentor/actions/workflows/start-ci.yml) and [stop](https://github.com/EtienneDx/git-mentor/actions/workflows/stop-ci.yml)
+            the instance using the given actions with the parameter "${{ github.event.pull_request.number }}".
+
+            You can access the application at [https://${{ steps.retrieve_domain.outputs.domain_name }}/](https://${{ steps.retrieve_domain.outputs.domain_name }}/).

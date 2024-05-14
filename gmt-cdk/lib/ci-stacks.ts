@@ -179,24 +179,6 @@ export class CiStack extends cdk.Stack {
     instance.connections.allowFromAnyIpv4(ec2.Port.tcp(80));
     instance.connections.allowFromAnyIpv4(ec2.Port.tcp(443));
 
-    // Create alarm on instance running more than 30 minutes to automatically stop it
-    let metric = new cw.Metric({
-      namespace: 'AWS/EC2',
-      metricName: 'CPUUtilization',
-      dimensionsMap: {
-        InstanceId: instance.instanceId,
-      },
-      period: cdk.Duration.minutes(5),
-    });
-    let alarm = new cw.Alarm(this, 'Backend Alarm', {
-      metric: metric,
-      threshold: 0,
-      evaluationPeriods: 6,
-      comparisonOperator: cw.ComparisonOperator.GREATER_THAN_THRESHOLD,
-    });
-
-    alarm.addAlarmAction(new cwactions.Ec2Action(cwactions.Ec2InstanceAction.STOP));
-
     // Deployments
 
     //  - Upload frontend to S3
