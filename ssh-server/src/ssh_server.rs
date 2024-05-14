@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use log::info;
 use russh::{
   server::{Config, Server},
   ChannelId,
@@ -77,7 +78,7 @@ where
     };
     let config = Arc::new(config);
     let res = russh::server::run(config, ("0.0.0.0", port), self);
-    println!("Listening on port {}", port);
+    info!("Listening on port {}", port);
     res.await.map_err(|e| e.into())
   }
 }

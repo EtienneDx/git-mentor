@@ -127,7 +127,19 @@ export class CiStack extends cdk.Stack {
         ec2.InitCommand.shellCommand('sudo -u postgres psql -c "GRANT ALL ON SCHEMA public TO admin_user"'),
         ec2.InitCommand.shellCommand('sudo -u postgres psql -c "ALTER DATABASE gmt OWNER TO admin_user"'),
         // Allow usage of password
-        ec2.InitCommand.shellCommand('echo "host all all 127.0.0.1/32 md5" >> /var/lib/pgsql/data/pg_hba.conf'),
+        ec2.InitCommand.shellCommand(`cat <<EOF >> /var/lib/pgsql/data/pg_hba.conf
+# TYPE  DATABASE        USER            ADDRESS                 METHOD
+local   all             all                                     peer
+# IPv4 local connections:
+host    all             all             127.0.0.1/32            md5
+# IPv6 local connections:
+host    all             all             ::1/128                 ident
+# Allow replication connections from localhost, by a user with the
+# replication privilege.
+local   replication     all                                     peer
+host    replication     all             127.0.0.1/32            ident
+host    replication     all             ::1/128                 ident
+`),
         // Restart PostgreSQL
         ec2.InitCommand.shellCommand('systemctl restart postgresql'),
       ),
