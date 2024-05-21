@@ -1,216 +1,127 @@
-import * as cdk from 'aws-cdk-lib';
+import { StackProps, Stack, RemovalPolicy, Tags, CfnOutput } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import * as s3 from 'aws-cdk-lib/aws-s3';
-import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
-import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
-import * as cwlogs from 'aws-cdk-lib/aws-logs';
-import * as iam from 'aws-cdk-lib/aws-iam';
-import * as ec2 from 'aws-cdk-lib/aws-ec2';
-import * as cw from 'aws-cdk-lib/aws-cloudwatch';
-import * as cwactions from 'aws-cdk-lib/aws-cloudwatch-actions';
-import * as s3deploy from 'aws-cdk-lib/aws-s3-deployment';
-import * as cd from 'aws-cdk-lib/aws-codedeploy';
+import { Bucket, BlockPublicAccess, BucketAccessControl } from 'aws-cdk-lib/aws-s3';
+import { Distribution, CachePolicy, AllowedMethods } from 'aws-cdk-lib/aws-cloudfront';
+import { S3Origin, HttpOrigin } from 'aws-cdk-lib/aws-cloudfront-origins';
+import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
+import { Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
+import { Vpc, SubnetType, Instance, InstanceType, InstanceClass, InstanceSize, AmazonLinuxImage, AmazonLinuxGeneration, CloudFormationInit, InitPackage, InitCommand, Port } from 'aws-cdk-lib/aws-ec2';
+import { BucketDeployment, Source } from 'aws-cdk-lib/aws-s3-deployment';
+import { ServerApplication, ServerDeploymentGroup, InstanceTagSet } from 'aws-cdk-lib/aws-codedeploy';
+import WebsiteBucket from './constructs/website-bucket';
+import ApplicationInstance from './constructs/application-instance';
+import postgresInstall from './init-commands/postgres';
+import cloudwatchAgent from './init-commands/cloudwatch-agent';
+import codeDeployAgent from './init-commands/codedeploy-agent';
 
-interface CiStackProps extends cdk.StackProps {
+interface CiStackProps extends StackProps {
   pullRequestId: string;
 }
 
-export class CiStack extends cdk.Stack {
+export class CiStack extends Stack {
   constructor(scope: Construct, id: string, props: CiStackProps) {
     super(scope, id, props);
 
-    // frontend S3 bucket
-    let bucket = new s3.Bucket(this, 'Frontend Bucket', {
-      bucketName: `gmt-pull-ci-frontend-bucket-${props.pullRequestId}`,
-      versioned: true,
-      removalPolicy: cdk.RemovalPolicy.DESTROY,
-      autoDeleteObjects: true,
-      publicReadAccess: true,
-      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ACLS,
-      accessControl: s3.BucketAccessControl.BUCKET_OWNER_FULL_CONTROL,
-      websiteIndexDocument: 'index.html',
-      websiteErrorDocument: 'index.html',
-    });
-
-    // artefacts S3 bucket
-    let artefactsBucket = new s3.Bucket(this, 'Artefacts Bucket', {
-      bucketName: `gmt-pull-ci-artefacts-bucket-${props.pullRequestId}`,
-      versioned: true,
-      removalPolicy: cdk.RemovalPolicy.DESTROY,
-      autoDeleteObjects: true,
-      publicReadAccess: false,
+    // IAM role for ec2 backend to access the bucket and group
+    let role = new Role(this, 'Frontend Role', {
+      roleName: `gmt-pull-ci-role-${props.pullRequestId}`,
+      assumedBy: new ServicePrincipal('ec2.amazonaws.com'),
     });
 
     // Cloudwatch group
-    let group = new cwlogs.LogGroup(this, 'Frontend Log Group', {
+    let group = new LogGroup(this, 'Frontend Log Group', {
       logGroupName: `/git-mentor/pulls/${props.pullRequestId}`,
-      removalPolicy: cdk.RemovalPolicy.DESTROY,
-    });
-
-    // IAM role for ec2 backend to access the bucket and group
-    let role = new iam.Role(this, 'Frontend Role', {
-      roleName: `gmt-pull-ci-role-${props.pullRequestId}`,
-      assumedBy: new iam.ServicePrincipal('ec2.amazonaws.com'),
+      removalPolicy: RemovalPolicy.DESTROY,
+      retention: RetentionDays.ONE_WEEK,
     });
 
     group.grantWrite(role);
-    artefactsBucket.grantReadWrite(role);
 
-    // VPC
-    let vpc = new ec2.Vpc(this, 'Backend VPC', {
-      maxAzs: 1,
-      subnetConfiguration: [
-        {
-          cidrMask: 24,
-          name: 'Public',
-          subnetType: ec2.SubnetType.PUBLIC,
-        },
-      ],
-    });
-
-    // ec2 instance
-    let instance = new ec2.Instance(this, 'Backend Instance', {
-      instanceType: ec2.InstanceType.of(ec2.InstanceClass.T2, ec2.InstanceSize.MICRO),
-      machineImage: new ec2.AmazonLinuxImage({
-        generation: ec2.AmazonLinuxGeneration.AMAZON_LINUX_2023,
-      }),
-      associatePublicIpAddress: true,
-      vpc: vpc,
-      role: role,
-      init: ec2.CloudFormationInit.fromElements(
-        // Install cloudwatch log agent
-        ec2.InitPackage.yum('amazon-cloudwatch-agent'),
-        // Configure cloudwatch log agent
-        ec2.InitCommand.shellCommand(`cat <<EOF > /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json
-        {
-          "logs": {
-            "logs_collected": {
-              "files": {
-                "collect_list": [
+    // Backend application
+    let backend = new ApplicationInstance(this, 'Backend', {
+      applicationName: `gmt-pull-ci-${props.pullRequestId}`,
+      instanceRole: role,
+      tags: {
+        'GMT-CI': `pull-${props.pullRequestId}`,
+      },
+      openPorts: [Port.tcp(22), Port.tcp(2222), Port.tcp(80), Port.tcp(443)],
+      instanceProps: {
+        init: CloudFormationInit.fromElements(
+          // Cloudwatch agent
+          ...cloudwatchAgent({
+            logs: {
+              files: {
+                collect_list: [
+                  // gmt server
                   {
-                    "file_path": "/var/log/gmt-server.log",
-                    "log_group_name": "/git-mentor/pulls/${props.pullRequestId}",
-                    "log_stream_name": "{instance_id}"
+                    file_path: '/gmt/logs/gmt-server.log',
+                    log_group_name: `/git-mentor/pulls/${props.pullRequestId}`,
+                    log_stream_name: '{instance_id}/gmt-server',
                   },
+                  // gmt api
                   {
-                    "file_path": "/var/log/gmt-api.log",
-                    "log_group_name": "/git-mentor/pulls/${props.pullRequestId}",
-                    "log_stream_name": "{instance_id}"
-                  }
-                ]
-              }
-            }
-          }
-        }`),
-        // Start cloudwatch log agent
-        ec2.InitCommand.shellCommand('amazon-cloudwatch-agent-ctl -a start'),
-        // Install codedeploy agent
-        ec2.InitCommand.shellCommand('yum update -y'),
-        ec2.InitCommand.shellCommand('yum install -y ruby'),
-        ec2.InitPackage.yum('wget'),
-        ec2.InitCommand.shellCommand('cd /home/ec2-user'),
-        ec2.InitCommand.shellCommand('wget https://aws-codedeploy-eu-west-3.s3.eu-west-3.amazonaws.com/latest/install'),
-        ec2.InitCommand.shellCommand('chmod +x ./install'),
-        ec2.InitCommand.shellCommand('./install auto'),
-        // Install PostgreSQL
-        ec2.InitCommand.shellCommand('dnf install -y postgresql15 postgresql15-server libpq'),
-        // Initialize PostgreSQL
-        ec2.InitCommand.shellCommand('postgresql-setup initdb'),
-        // Start PostgreSQL
-        ec2.InitCommand.shellCommand('systemctl start postgresql'),
-        // Create user
-        ec2.InitCommand.shellCommand('sudo -u postgres psql -c "CREATE USER admin_user WITH PASSWORD \'admin\'"'),
-        // Create database
-        ec2.InitCommand.shellCommand('sudo -u postgres psql -c "CREATE DATABASE gmt"'),
-        // Allow user to access database
-        ec2.InitCommand.shellCommand('sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE gmt TO admin_user"'),
-        ec2.InitCommand.shellCommand('sudo -u postgres psql -c "GRANT ALL ON SCHEMA public TO admin_user"'),
-        ec2.InitCommand.shellCommand('sudo -u postgres psql -c "ALTER DATABASE gmt OWNER TO admin_user"'),
-        // Allow usage of password
-        ec2.InitCommand.shellCommand(`cat <<EOF >> /var/lib/pgsql/data/pg_hba.conf
-# TYPE  DATABASE        USER            ADDRESS                 METHOD
-local   all             all                                     peer
-# IPv4 local connections:
-host    all             all             127.0.0.1/32            md5
-# IPv6 local connections:
-host    all             all             ::1/128                 ident
-# Allow replication connections from localhost, by a user with the
-# replication privilege.
-local   replication     all                                     peer
-host    replication     all             127.0.0.1/32            ident
-host    replication     all             ::1/128                 ident
-`),
-        // Restart PostgreSQL
-        ec2.InitCommand.shellCommand('systemctl restart postgresql'),
-      ),
-    });
-    cdk.Tags.of(instance).add('GMT-CI', `pull-${props.pullRequestId}`);
-
-    // code deploy application
-    let apiApp = new cd.ServerApplication(this, 'API Application', {
-      applicationName: `gmt-pull-${props.pullRequestId}-api-application`,
-    });
-    let gitApp = new cd.ServerApplication(this, 'Git Application', {
-      applicationName: `gmt-pull-${props.pullRequestId}-git-application`,
+                    file_path: '/gmt/logs/gmt-api.log',
+                    log_group_name: `/git-mentor/pulls/${props.pullRequestId}`,
+                    log_stream_name: '{instance_id}/gmt-api',
+                  },
+                  // codedeploy
+                  {
+                    file_path: '/var/log/aws/codedeploy-agent/codedeploy-agent.log',
+                    log_group_name: `/git-mentor/pulls/${props.pullRequestId}`,
+                    log_stream_name: '{instance_id}/codedeploy-agent',
+                  },
+                ],
+              },
+            },
+          }),
+          // CodeDeploy agent
+          ...codeDeployAgent(),
+          // Postgres
+          ...postgresInstall({
+            databaseName: 'gmt',
+            databaseUser: 'admin_user',
+            databasePassword: 'admin',
+          }),
+        ),
+      }
     });
 
-    // code deploy group
-    let apiGroup = new cd.ServerDeploymentGroup(this, 'API Deployment Group', {
-      application: apiApp,
-      deploymentGroupName: `gmt-pull-${props.pullRequestId}-api-deployment-group`,
-      ec2InstanceTags: new cd.InstanceTagSet({
-        'GMT-CI': [`pull-${props.pullRequestId}`],
-      }),
-    });
-    let gitGroup = new cd.ServerDeploymentGroup(this, 'Git Deployment Group', {
-      application: gitApp,
-      deploymentGroupName: `gmt-pull-${props.pullRequestId}-git-deployment-group`,
-      ec2InstanceTags: new cd.InstanceTagSet({
-        'GMT-CI': [`pull-${props.pullRequestId}`],
-      }),
-    });
-
-    // Cloudfront distribution
-    let distribution = new cloudfront.Distribution(this, 'Frontend Distribution', {
-      defaultBehavior: { 
-        origin: new origins.S3Origin(bucket, {
-          originShieldEnabled: false,
-        }),
+    let frontend = new WebsiteBucket(this, 'Frontend', {
+      bucketName: `gmt-pull-ci-frontend-bucket-${props.pullRequestId}`,
+      deployedAssets: ['../gmt-web-app/build', '../gmt-web-app/prod'],
+      s3OriginProps: {
+        originShieldEnabled: false,
       },
-      additionalBehaviors: {
-        '/api/*': {
-          origin: new origins.HttpOrigin(instance.instancePublicDnsName),
-          cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
-          allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
+      distributionProps: {
+        additionalBehaviors: {
+          '/api/*': {
+            origin: new HttpOrigin(backend.instance.instancePublicDnsName),
+            cachePolicy: CachePolicy.CACHING_DISABLED,
+            allowedMethods: AllowedMethods.ALLOW_ALL,
+          },
         },
       },
-    });
-
-    // Open port ssh and http
-    instance.connections.allowFromAnyIpv4(ec2.Port.tcp(22));
-    instance.connections.allowFromAnyIpv4(ec2.Port.tcp(80));
-    instance.connections.allowFromAnyIpv4(ec2.Port.tcp(443));
-
-    // Deployments
-
-    //  - Upload frontend to S3
-    new s3deploy.BucketDeployment(this, 'Deploy Frontend', {
-      sources: [s3deploy.Source.asset('../gmt-web-app/build'), s3deploy.Source.asset('../gmt-web-app/prod')],
-      destinationBucket: bucket,
-      distribution,
     });
 
     // Outputs
-    new cdk.CfnOutput(this, 'DistributionDomainName', {
-      value: distribution.distributionDomainName,
+    new CfnOutput(this, 'DistributionDomainName', {
+      value: frontend.distribution.distributionDomainName,
     });
 
-    new cdk.CfnOutput(this, 'InstanceUrl', {
-      value: instance.instancePublicDnsName,
+    new CfnOutput(this, 'InstanceId', {
+      value: backend.instance.instanceId,
     });
 
-    new cdk.CfnOutput(this, 'InstanceId', {
-      value: instance.instanceId,
+    new CfnOutput(this, 'BackendArtefactBucket', {
+      value: backend.artefactsBucketName,
+    });
+
+    new CfnOutput(this, 'BackendApplicationName', {
+      value: backend.application.applicationName,
+    });
+
+    new CfnOutput(this, 'BackendDeploymentGroupName', {
+      value: backend.deploymentGroup.deploymentGroupName,
     });
   }
 }

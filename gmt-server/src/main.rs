@@ -29,7 +29,7 @@ async fn main() {
   let port = std::env::var("SSH_PORT")
     .map(|port| port.parse().expect("Invalid port number"))
     .ok()
-    .unwrap_or_else(|| 2222);
+    .unwrap_or(2222);
 
   server
     .listen(port)
