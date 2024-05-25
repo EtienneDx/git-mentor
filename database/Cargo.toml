@@ -19,4 +19,4 @@ faux = { version = "^0.1", optional = true }
 
 [dev-dependencies]
 dotenvy = "0.15.7"
-rstest = "0.18.2"
+rstest = "0.19"

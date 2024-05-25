@@ -11,7 +11,7 @@ license = "MIT"
 git-server = { path = "../git-server" }
 ssh-server = { path = "../ssh-server" }
 log = "0.4.20"
-russh-keys = "0.38.x"
-simple_logger = "4.2.0"
+russh-keys = "0.43.x"
+simple_logger = "5.x"
 tempfile = "3.8.1"
 tokio = "1.33.0"

@@ -11,7 +11,7 @@ default = ["poem-openapi/swagger-ui"]
 database = { path = "../database" }
 gmt-common = { path = "../gmt-common" }
 tracing = "0.1"
-simple_logger = "4.3.3"
+simple_logger = "5.x"
 poem = { version = "3", features = ["test"] }
 poem-openapi = "5"
 tokio = { version = "1", features = ["full"] }
@@ -26,8 +26,8 @@ dotenvy = "0.15.7"
 [dev-dependencies]
 database = { path = "../database", features = ["mock"] }
 gmt-common = { path = "../gmt-common", features = ["mock"] }
-poem = { version = "1", features = ["test"] }
-rstest = "0.18.2"
+poem = { version = "3", features = ["test"] }
+rstest = "0.19"
 faux = "^0.1"
 
 [build-dependencies]
