@@ -5,30 +5,30 @@ files:
     destination: /gmt/bin
   - source: gmt-api
     destination: /gmt/bin
-  - source: app-spec/ci/gmt-server.service
+  - source: ci/gmt-server.service
     destination: /etc/systemd/system
-  - source: app-spec/ci/gmt-api.service
+  - source: ci/gmt-api.service
     destination: /etc/systemd/system
-  - source: app-spec/ci/.env
+  - source: ci/.env
     destination: /gmt
 hooks:
   BeforeInstall:
-    - location: app-spec/ci/before_install.sh
+    - location: ci/before_install.sh
       timeout: 300
       runas: root
   AfterInstall:
-    - location: app-spec/ci/after_install.sh
+    - location: ci/after_install.sh
       timeout: 300
       runas: root
   ApplicationStop:
-    - location: app-spec/ci/stop.sh
+    - location: ci/stop.sh
       timeout: 300
       runas: root
   ApplicationStart:
-    - location: app-spec/ci/start.sh
+    - location: ci/start.sh
       timeout: 300
       runas: root
   ValidateService:
-    - location: app-spec/ci/validate.sh
+    - location: ci/validate.sh
       timeout: 300
       runas: root
