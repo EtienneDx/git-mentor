@@ -2,6 +2,7 @@
 name = "gmt-api"
 version = "0.1.0"
 edition = "2021"
+license = "MIT"
 
 [features]
 default = ["poem-openapi/swagger-ui"]
@@ -20,7 +21,7 @@ jwt = "0.16.0"
 hmac = "0.12.1"
 log = "0.4.21"
 sha2 = "0.10.8"
-dotenv = "0.15.0"
+dotenvy = "0.15.7"
 
 [dev-dependencies]
 database = { path = "../database", features = ["mock"] }
@@ -41,7 +42,7 @@ jwt = "0.16.0"
 hmac = "0.12.1"
 log = "0.4.21"
 sha2 = "0.10.8"
-dotenv = "0.15.0"
+dotenvy = "0.15.7"
 
 [dependencies.tracing-subscriber]
 version = "0.3.18"

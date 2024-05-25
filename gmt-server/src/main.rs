@@ -16,7 +16,7 @@ async fn main() {
     .unwrap();
   info!("Logger initialized");
 
-  dotenv::dotenv().ok();
+  dotenvy::dotenv().ok();
 
   let auth = DbAuthenticator::new();
   let repository_provider = DbRepositoryProvider::new();

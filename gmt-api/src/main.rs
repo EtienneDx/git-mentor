@@ -11,7 +11,7 @@ pub mod swagger;
 #[tokio::main]
 async fn main() -> Result<(), std::io::Error> {
   simple_logger::SimpleLogger::new().env().init().unwrap();
-  dotenv::dotenv().ok();
+  dotenvy::dotenv().ok();
 
   let connection_pool = ConnectionPool::new_from_env().expect("Failed to create connection pool");
   connection_pool

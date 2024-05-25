@@ -12,7 +12,7 @@ use database::connection_pool::ConnectionPool;
 use src::services::make_service;
 
 fn main() {
-  dotenv::dotenv().ok();
+  dotenvy::dotenv().ok();
 
   let db = ConnectionPool::faux();
 
