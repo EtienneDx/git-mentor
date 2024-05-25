@@ -79,11 +79,7 @@ where
   type Error = SshError;
 
   /// Authenticates the user based on their public key.
-  async fn auth_publickey(
-    &mut self,
-    user: &str,
-    key: &PublicKey,
-  ) -> Result<Auth, Self::Error> {
+  async fn auth_publickey(&mut self, user: &str, key: &PublicKey) -> Result<Auth, Self::Error> {
     if self.user.is_some() {
       // We shouldn't be able to authenticate twice
       return Err(SshError::AlreadyAuthenticated);
@@ -92,11 +88,9 @@ where
       self.user = Some(user);
       Ok(Auth::Accept)
     } else {
-      Ok(
-        Auth::Reject {
-          proceed_with_methods: None,
-        },
-      )
+      Ok(Auth::Reject {
+        proceed_with_methods: None,
+      })
     }
   }
 
