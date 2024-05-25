@@ -57,6 +57,7 @@ export default class ApplicationInstance extends Construct {
       associatePublicIpAddress: true,
       vpc: this.vpc,
       role: props.instanceRole,
+      ...props.instanceProps,
     });
     for (let [key, value] of Object.entries(props.tags)) {
       Tags.of(this.instance).add(key, value);
