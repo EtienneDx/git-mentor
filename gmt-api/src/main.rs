@@ -31,6 +31,6 @@ async fn main() -> Result<(), std::io::Error> {
   log::info!("Listening on port {}", port);
 
   poem::Server::new(TcpListener::bind(format!("0.0.0.0:{}", port)))
-    .run(app.with(Cors::new().allow_origin(cors)))
+    .run(app.with(Cors::new().allow_origin(cors).allow_origin_regex("http://*.cloudfront.net")))
     .await
 }
