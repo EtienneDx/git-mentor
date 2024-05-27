@@ -91,6 +91,7 @@ jobs:
           cp target/release/gmt-api dist/gmt-api
           cp -r app-spec/ci dist
           cp app-spec/appspec.ci.yml dist/appspec.yml
+          echo "API_CORS=https://${{ steps.stack_outputs.outputs.domain_name }}" >> dist/ci/.env
           cd dist
           zip -r app.zip .
 

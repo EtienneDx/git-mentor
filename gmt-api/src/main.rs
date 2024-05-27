@@ -23,7 +23,9 @@ async fn main() -> Result<(), std::io::Error> {
 
   (api_service, app) = add_swagger_ui(api_service, app);
 
-  app = app.nest("/", api_service);
+  let api_root = std::env::var("API_ROOT").unwrap_or_else(|_| "/".to_string());
+
+  app = app.nest(&api_root, api_service);
 
   let port = std::env::var("API_PORT").unwrap_or_else(|_| "3001".to_string());
   let cors = std::env::var("API_CORS").unwrap_or_else(|_| "http://localhost:3000".to_string());
@@ -31,6 +33,6 @@ async fn main() -> Result<(), std::io::Error> {
   log::info!("Listening on port {}", port);
 
   poem::Server::new(TcpListener::bind(format!("0.0.0.0:{}", port)))
-    .run(app.with(Cors::new().allow_origin(cors).allow_origin_regex("http://*.cloudfront.net")))
+    .run(app.with(Cors::new().allow_origin(cors)))
     .await
 }

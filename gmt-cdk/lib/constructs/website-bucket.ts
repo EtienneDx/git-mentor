@@ -1,5 +1,5 @@
 import { RemovalPolicy } from "aws-cdk-lib";
-import { CloudFrontWebDistribution, Distribution, DistributionProps } from "aws-cdk-lib/aws-cloudfront";
+import { CloudFrontWebDistribution, Distribution, DistributionProps, ViewerProtocolPolicy } from "aws-cdk-lib/aws-cloudfront";
 import { S3Origin, S3OriginProps } from "aws-cdk-lib/aws-cloudfront-origins";
 import { BlockPublicAccess, Bucket, BucketAccessControl, BucketProps } from "aws-cdk-lib/aws-s3";
 import { BucketDeployment, BucketDeploymentProps, Source } from "aws-cdk-lib/aws-s3-deployment";
@@ -40,6 +40,7 @@ export default class WebsiteBucket extends Construct {
     this.distribution = new Distribution(this, 'Frontend Distribution', {
       defaultBehavior: { 
         origin: this.s3_origin,
+        viewerProtocolPolicy: ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
       },
       ...props.distributionProps,
     });
