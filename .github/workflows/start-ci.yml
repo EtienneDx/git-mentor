@@ -14,7 +14,15 @@ jobs:
   start-aws-instance:
     runs-on: ubuntu-latest
 
+    permissions:
+      id-token: write
+      contents: read
+      pull-requests: write
+
     steps:        
+      - name: Checkout code
+        uses: actions/checkout@v3
+
       - name: configure aws credentials
         uses: aws-actions/configure-aws-credentials@v1.7.0
         with:
@@ -29,3 +37,34 @@ jobs:
       
       - name: Start instance
         run: aws ec2 start-instances --instance-ids ${{ steps.retrieve_instance_id.outputs.instance_id }}
+      
+      - name: Install cdk
+        run : npm install -g aws-cdk
+
+      - name: Install cdk dependencies
+        run: npm install
+        working-directory: gmt-cdk
+      
+      - name: Re-deploy stack to update distribution
+        run: cdk deploy GmtCdkStack-ci-${{ inputs.pr }} --require-approval never
+        env:
+          GH_PULL_ID: ${{ inputs.pr }}
+
+      - name: Retrieve stack outputs
+        id: stack_outputs
+        run: |
+          echo "domain_name=$(aws cloudformation describe-stacks --stack-name GmtCdkStack-ci-${{ inputs.pr }} --query "Stacks[0].Outputs[?OutputKey=='DistributionDomainName'].OutputValue" --output text)" >> $GITHUB_OUTPUT    
+
+      - name: Post successful comment
+        uses: KeisukeYamashita/create-comment@v1
+        with:
+          check-only-first-line: "true"
+          comment: |
+            ## Deployment status.
+
+            Instance re-started successfully.
+
+            You can [start](https://github.com/EtienneDx/git-mentor/actions/workflows/start-ci.yml) and [stop](https://github.com/EtienneDx/git-mentor/actions/workflows/stop-ci.yml) the instance using the given actions with the parameter "${{ inputs.pr }}".
+
+            You can access the application at [https://${{ steps.stack_outputs.outputs.domain_name }}/](https://${{ steps.stack_outputs.outputs.domain_name }}/).
+    

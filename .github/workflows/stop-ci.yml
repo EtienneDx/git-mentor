@@ -14,6 +14,11 @@ jobs:
   start-aws-instance:
     runs-on: ubuntu-latest
 
+    permissions:
+      id-token: write
+      contents: read
+      pull-requests: write
+
     steps:        
       - name: configure aws credentials
         uses: aws-actions/configure-aws-credentials@v1.7.0
@@ -29,3 +34,12 @@ jobs:
       
       - name: Start instance
         run: aws ec2 stop-instances --instance-ids ${{ steps.retrieve_instance_id.outputs.instance_id }}
+
+      - name: Post successful comment
+        uses: KeisukeYamashita/create-comment@v1
+        with:
+          check-only-first-line: "true"
+          comment: |
+            ## Deployment status.
+
+            Instance has been stopped, you can [start](https://github.com/EtienneDx/git-mentor/actions/workflows/start-ci.yml) it using the given actions with the parameter "${{ inputs.pr }}".
