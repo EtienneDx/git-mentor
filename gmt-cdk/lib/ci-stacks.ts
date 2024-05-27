@@ -1,7 +1,7 @@
 import { StackProps, Stack, RemovalPolicy, Tags, CfnOutput } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { Bucket, BlockPublicAccess, BucketAccessControl } from 'aws-cdk-lib/aws-s3';
-import { Distribution, CachePolicy, AllowedMethods } from 'aws-cdk-lib/aws-cloudfront';
+import { Distribution, CachePolicy, AllowedMethods, OriginProtocolPolicy } from 'aws-cdk-lib/aws-cloudfront';
 import { S3Origin, HttpOrigin } from 'aws-cdk-lib/aws-cloudfront-origins';
 import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
 import { Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
@@ -95,7 +95,9 @@ export class CiStack extends Stack {
       distributionProps: {
         additionalBehaviors: {
           '/api/*': {
-            origin: new HttpOrigin(backend.instance.instancePublicDnsName),
+            origin: new HttpOrigin(backend.instance.instancePublicDnsName, {
+              protocolPolicy: OriginProtocolPolicy.HTTP_ONLY,
+            }),
             cachePolicy: CachePolicy.CACHING_DISABLED,
             allowedMethods: AllowedMethods.ALLOW_ALL,
           },
