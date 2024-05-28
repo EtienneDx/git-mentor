@@ -1,7 +1,9 @@
+use std::error::Error;
+
 use diesel::ConnectionError;
 use thiserror::Error;
 
-#[derive(Error, Debug, PartialEq)]
+#[derive(Error, Debug)]
 pub enum DatabaseError {
   #[error("Connection error: {0}")]
   ConnectionError(#[from] ConnectionError),
@@ -11,8 +13,8 @@ pub enum DatabaseError {
   DieselError(#[from] diesel::result::Error),
   #[error("Connection pool error: {0}")]
   ConnectionPoolError(String),
-  #[error("Migration error")]
-  MigrationError,
+  #[error("Migration error: {0}")]
+  MigrationError(#[from] Box<dyn Error + Send + Sync>),
   #[error("Not found")]
   NotFound,
 }

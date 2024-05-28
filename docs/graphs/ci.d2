@@ -1,0 +1,87 @@
+front: Frontend Stack {
+  icon: https://icons.terrastruct.com/aws%2FManagement%20&%20Governance%2FAWS-CloudFormation.svg;
+  
+  s3: Front-End Bucket {
+    icon: https://icons.terrastruct.com/aws%2FStorage%2FAmazon-Simple-Storage-Service-S3_Bucket_light-bg.svg
+  }
+  distr: Cloudfront Distribution {
+    icon: https://icons.terrastruct.com/aws%2FNetworking%20&%20Content%20Delivery%2FAmazon-CloudFront.svg
+  }
+  iam: IAM Role {
+    icon: https://icons.terrastruct.com/aws%2FSecurity%2C%20Identity%2C%20&%20Compliance%2FAWS-Identify-and-Access-Management_IAM.svg
+  }
+  watch: Cloudwatch {
+    icon: https://icons.terrastruct.com/aws%2FManagement%20&%20Governance%2FAmazon-CloudWatch.svg
+  }
+
+  distr -> s3;
+  iam -> s3;
+}
+
+back: Backend stack {
+  icon: https://icons.terrastruct.com/aws%2FManagement%20&%20Governance%2FAWS-CloudFormation.svg;
+
+  ec2: EC2 {
+    icon: https://icons.terrastruct.com/aws%2FCompute%2FAmazon-EC2.svg
+  }
+  ks: Kill switch alarm {
+    icon: https://icons.terrastruct.com/aws%2FManagement%20&%20Governance%2FAmazon-CloudWatch_Alarm_light-bg.svg
+  }
+  ksl: Kill switch lambda {
+    icon: https://icons.terrastruct.com/aws%2FCompute%2FAWS-Lambda_light-bg.svg
+  }
+
+  ec2 -> ks: Running for more\nthan 30 minutes;
+  ks -> ksl: Trigger;
+  ksl -> ec2: Stop;
+}
+
+front.iam -> back.ec2: Assume Role;
+back.ec2 -> front.s3: Retrieve artefacts;
+back.ec2 -> front.watch: Upload logs;
+
+gh: Github Action {
+  icon: https://icons.terrastruct.com/dev%2Fgithub.svg
+  
+  pull: On Pull Request Push;
+  build: Build Artefacts;
+  front-stack-exists: Check if Frontend stack exists {
+    shape: diamond;
+  }
+  deploy-front: Deploy Frontend Stack;
+  upload-artefacts: Upload Artefacts;
+
+  pull -> build;
+  build -> front-stack-exists;
+  front-stack-exists -> deploy-front: No;
+  front-stack-exists -> upload-artefacts: Yes;
+  deploy-front -> upload-artefacts;
+
+  manual: Manual Backend start;
+  back-stack-exists: Check if Backend stack exists {
+    shape: diamond;
+  }
+  deploy-back: Deploy Backend Stack;
+  start-instance: Start EC2 instance;
+
+  manual -> back-stack-exists;
+  back-stack-exists -> deploy-back: No;
+  back-stack-exists -> start-instance: Yes;
+
+  stop: Manual Backend stop;
+  stop-instance: Stop EC2 instance;
+  back-stack-exists-2: Check if Backend stack exists {
+    shape: diamond;
+  }
+
+  stop -> back-stack-exists-2;
+  back-stack-exists-2 -> stop-instance: Yes;
+  
+
+  cleanup: On PR Close;
+  delete-back: Delete Backend Stack;
+  delete-front: Delete Frontend Stack;
+
+  cleanup -> delete-back;
+  cleanup -> delete-front;
+}

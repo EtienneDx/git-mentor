@@ -2,6 +2,7 @@
 name = "ssh-server"
 version = "0.1.0"
 edition = "2021"
+license = "MIT"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -9,8 +10,8 @@ edition = "2021"
 async-trait = "0.1.74"
 dyn-clone = "1.0.16"
 log = "0.4.20"
-russh = "0.39.x"
-russh-keys = "0.38.x"
+russh = "0.43.x"
+russh-keys = "0.43.x"
 shell-words = "1.1.0"
 thiserror = "1.0.50"
 tokio = { version = "1.33.0", features = ["time"] }

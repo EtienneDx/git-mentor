@@ -1,0 +1,164 @@
+name: Ci-Deploy
+
+on:
+  pull_request:
+    branches: [ "master" ]
+
+env:
+  AWS_REGION: eu-west-3
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up cargo cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+          cache-all-crates: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: "**/package-lock.json"
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: gmt-web-app
+      
+      - name: Install cdk
+        run : npm install -g aws-cdk
+
+      - name: Build rust projects
+        run: cargo build --release
+
+      - name: Make sdk
+        run: npm run make-sdk
+        working-directory: gmt-web-app
+      
+      - name: Build front
+        run: npm run build
+        working-directory: gmt-web-app
+        
+      - name: configure aws credentials
+        uses: aws-actions/configure-aws-credentials@v1.7.0
+        with:
+          role-to-assume: arn:aws:iam::446114629971:role/GithubActionRole
+          role-session-name: GitHub_to_AWS_via_FederatedOIDC
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Install cdk dependencies
+        run: npm install
+        working-directory: gmt-cdk
+
+      - name: Deploy
+        id: deploy_stack
+        continue-on-error: true
+        run: cdk deploy GmtCdkStack-ci-${{ github.event.pull_request.number }} --require-approval never
+        working-directory: gmt-cdk
+        env:
+          GH_PULL_ID: ${{ github.event.pull_request.number }}
+
+      - name: Retrieve stack outputs
+        if: steps.deploy_stack.outcome == 'success'
+        id: stack_outputs
+        run: |
+          echo "domain_name=$(aws cloudformation describe-stacks --stack-name GmtCdkStack-ci-${{ github.event.pull_request.number }} --query "Stacks[0].Outputs[?OutputKey=='DistributionDomainName'].OutputValue" --output text)" >> $GITHUB_OUTPUT
+          echo "instance_id=$(aws cloudformation describe-stacks --stack-name GmtCdkStack-ci-${{ github.event.pull_request.number }} --query "Stacks[0].Outputs[?OutputKey=='InstanceId'].OutputValue" --output text)" >> $GITHUB_OUTPUT
+          echo "artefact_bucket=$(aws cloudformation describe-stacks --stack-name GmtCdkStack-ci-${{ github.event.pull_request.number }} --query "Stacks[0].Outputs[?OutputKey=='BackendArtefactBucket'].OutputValue" --output text)" >> $GITHUB_OUTPUT
+          echo "application_name=$(aws cloudformation describe-stacks --stack-name GmtCdkStack-ci-${{ github.event.pull_request.number }} --query "Stacks[0].Outputs[?OutputKey=='BackendApplicationName'].OutputValue" --output text)" >> $GITHUB_OUTPUT
+          echo "deployment_group_name=$(aws cloudformation describe-stacks --stack-name GmtCdkStack-ci-${{ github.event.pull_request.number }} --query "Stacks[0].Outputs[?OutputKey=='BackendDeploymentGroupName'].OutputValue" --output text)" >> $GITHUB_OUTPUT
+
+      - name: Start instance
+        if: steps.deploy_stack.outcome == 'success'
+        run: aws ec2 start-instances --instance-ids ${{ steps.stack_outputs.outputs.instance_id }}
+
+      - name: Bundle back-end application
+        if: steps.deploy_stack.outcome == 'success'
+        run: |
+          mkdir -p dist
+          cp target/release/gmt-server dist/gmt-server
+          cp target/release/gmt-api dist/gmt-api
+          cp -r app-spec/ci dist
+          cp app-spec/appspec.ci.yml dist/appspec.yml
+          echo "API_CORS=https://${{ steps.stack_outputs.outputs.domain_name }}" >> dist/ci/.env
+          cd dist
+          zip -r app.zip .
+
+      - name: Upload application to S3
+        if: steps.deploy_stack.outcome == 'success'
+        run: aws s3 cp dist/app.zip s3://${{ steps.stack_outputs.outputs.artefact_bucket }}/app.zip
+
+      - name: Deploy application to CodeDeploy
+        if: steps.deploy_stack.outcome == 'success'
+        id: deploy_code
+        run: |
+          deploymentId=$(aws deploy create-deployment \
+            --application-name ${{ steps.stack_outputs.outputs.application_name }} \
+            --deployment-group-name ${{ steps.stack_outputs.outputs.deployment_group_name }} \
+            --s3-location bucket=${{ steps.stack_outputs.outputs.artefact_bucket }},key=app.zip,bundleType=zip \
+            --deployment-config-name CodeDeployDefault.AllAtOnce \
+            --description "Deploying app from PR ${{ github.event.pull_request.number }} with commit ${{ github.sha }}" \
+            --query "deploymentId" --output text)
+          echo "deploymentId=$deploymentId" >> $GITHUB_OUTPUT
+
+      - name: Wait on deployment
+        if: steps.deploy_stack.outcome == 'success'
+        id: wait_on_deployment
+        continue-on-error: true
+        run: aws deploy wait deployment-successful --deployment-id ${{ steps.deploy_code.outputs.deploymentId }}
+
+      - name: Post successful comment
+        uses: KeisukeYamashita/create-comment@v1
+        continue-on-error: true
+        if: steps.deploy_stack.outcome == 'success' && steps.wait_on_deployment.outcome == 'success'
+        with:
+          check-only-first-line: "true"
+          comment: |
+            ## Deployment status.
+
+            Deployment has been successful.
+
+            You can [start](https://github.com/EtienneDx/git-mentor/actions/workflows/start-ci.yml) and [stop](https://github.com/EtienneDx/git-mentor/actions/workflows/stop-ci.yml) the instance using the given actions with the parameter "${{ github.event.pull_request.number }}".
+
+            You can access the application at [https://${{ steps.stack_outputs.outputs.domain_name }}/](https://${{ steps.stack_outputs.outputs.domain_name }}/).
+
+      - name: Post code deploy failure comment
+        uses: KeisukeYamashita/create-comment@v1
+        continue-on-error: true
+        if: steps.deploy_stack.outcome == 'success' && steps.wait_on_deployment.outcome == 'failure'
+        with:
+          check-only-first-line: "true"
+          comment: |
+            ## Deployment status.
+
+            The stack has been deployed, but the deployment has failed.
+
+            You can see the deployment logs [here](https://eu-west-3.console.aws.amazon.com/codesuite/codedeploy/deployments/${{ steps.deploy_code.outputs.deploymentId }}?region=eu-west-3).
+
+      - name: Post stack failure comment
+        uses: KeisukeYamashita/create-comment@v1
+        continue-on-error: true
+        if: steps.deploy_stack.outcome == 'failure'
+        with:
+          check-only-first-line: "true"
+          comment: |
+            ## Deployment status.
+
+            The stack deployment has failed.
+
+            You can see the deployment logs in [the PR checks tab](${{ github.event.pull_request.html_url }}/checks).
+      
+      - name: Fail the workflow if deployment failed
+        if: steps.wait_on_deployment.outcome == 'failure' || steps.deploy_stack.outcome == 'failure'
+        run: exit 1

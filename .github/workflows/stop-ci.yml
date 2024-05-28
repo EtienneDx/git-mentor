@@ -1,0 +1,45 @@
+name: Start AWS Instance
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: 'Pull Request number'
+        required: true
+
+env:
+  AWS_REGION: eu-west-3
+
+jobs:
+  start-aws-instance:
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write
+      contents: read
+      pull-requests: write
+
+    steps:        
+      - name: configure aws credentials
+        uses: aws-actions/configure-aws-credentials@v1.7.0
+        with:
+          role-to-assume: arn:aws:iam::446114629971:role/GithubActionRole
+          role-session-name: GitHub_to_AWS_via_FederatedOIDC
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Retrieve instance id
+        id: retrieve_instance_id
+        run: |
+          echo "instance_id=$(aws cloudformation describe-stacks --stack-name GmtCdkStack-ci-${{ inputs.pr }} --query "Stacks[0].Outputs[?OutputKey=='InstanceId'].OutputValue" --output text)" >> $GITHUB_OUTPUT
+      
+      - name: Start instance
+        run: aws ec2 stop-instances --instance-ids ${{ steps.retrieve_instance_id.outputs.instance_id }}
+
+      - name: Post successful comment
+        uses: KeisukeYamashita/create-comment@v1
+        with:
+          check-only-first-line: "true"
+          comment: |
+            ## Deployment status.
+
+            Instance has been stopped, you can [start](https://github.com/EtienneDx/git-mentor/actions/workflows/start-ci.yml) it using the given actions with the parameter "${{ inputs.pr }}".

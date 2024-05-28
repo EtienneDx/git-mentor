@@ -79,46 +79,39 @@ where
   type Error = SshError;
 
   /// Authenticates the user based on their public key.
-  async fn auth_publickey(
-    mut self,
-    user: &str,
-    key: &PublicKey,
-  ) -> Result<(Self, Auth), Self::Error> {
+  async fn auth_publickey(&mut self, user: &str, key: &PublicKey) -> Result<Auth, Self::Error> {
     if self.user.is_some() {
       // We shouldn't be able to authenticate twice
       return Err(SshError::AlreadyAuthenticated);
     }
     if let Some(user) = self.authenticator.validate_public_key(user, key)? {
       self.user = Some(user);
-      Ok((self, Auth::Accept))
+      Ok(Auth::Accept)
     } else {
-      Ok((
-        self,
-        Auth::Reject {
-          proceed_with_methods: None,
-        },
-      ))
+      Ok(Auth::Reject {
+        proceed_with_methods: None,
+      })
     }
   }
 
   /// Opens a new session. Required for russh to accept the ssh connection.
   async fn channel_open_session(
-    mut self,
+    &mut self,
     _channel: Channel<Msg>,
-    session: Session,
-  ) -> Result<(Self, bool, Session), Self::Error> {
-    Ok((self, true, session))
+    _session: &mut Session,
+  ) -> Result<bool, Self::Error> {
+    Ok(true)
   }
 
   /// Executes a ssh command. This is where the git command is received.
   ///
   /// Should any new commands become supported, they should be added here.
   async fn exec_request(
-    mut self,
+    &mut self,
     channel_id: ChannelId,
     data: &[u8],
-    session: Session,
-  ) -> Result<(Self, Session), Self::Error> {
+    session: &mut Session,
+  ) -> Result<(), Self::Error> {
     if self.user.is_none() {
       // We shouldn't be able to authenticate twice
       return Err(SshError::NotAuthenticated);
@@ -148,37 +141,37 @@ where
       handle.close(channel_id).await.unwrap();
     }
 
-    Ok((self, session))
+    Ok(())
   }
 
   /// Receives data from the client and forwards it to the git process.
   async fn data(
-    mut self,
+    &mut self,
     channel_id: ChannelId,
     data: &[u8],
-    session: Session,
-  ) -> Result<(Self, Session), Self::Error> {
+    _session: &mut Session,
+  ) -> Result<(), Self::Error> {
     if let Some(process) = self.processes.get_mut(&channel_id) {
       process.write_all(data).await.map_err(|e| {
         debug!("Error writing to git process: {:?}", e);
         SshError::ProcessNotStartedError
       })?;
     }
-    Ok((self, session))
+    Ok(())
   }
 
   /// Receives an EOF from the client and stops the git process.
   async fn channel_eof(
-    mut self,
+    &mut self,
     channel_id: ChannelId,
-    session: Session,
-  ) -> Result<(Self, Session), Self::Error> {
+    _session: &mut Session,
+  ) -> Result<(), Self::Error> {
     let process = self.processes.remove(&channel_id);
     if let Some(mut process) = process {
       process.shutdown().await?;
     }
 
-    Ok((self, session))
+    Ok(())
   }
 }
 

@@ -26,7 +26,7 @@ jobs:
         working-directory: gmt-api
 
       - name: Make sdk
-        run: npx openapi --input ../gmt-api/openapi/main_service.json --output ./src/gmt-api --postfixServices "" --name "main_service"
+        run: npm run make-sdk
 
       - name: Check linting
         run: npm run lint

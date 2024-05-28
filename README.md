@@ -62,3 +62,22 @@ cargo run
 ```
 
 For the frontend, please refer to the [gmt-web-app README](./gmt-web-app/).
+
+## Contributing
+
+When a pull request is submitted, the project will run the tests, linters and vulnerability checks.
+
+Provided a maintainer's approval, the proposed change will also be deployed on an AWS environment, allowing for manual testing. Please remember to turn off the instance after testing for pending PRs, as my wallet will thank you.
+
+## Re-usable crates
+
+Some rust crates defined here could someday be re-used and deployed in the crates.io repository. If you are interested in using one of the crates, please open an issue to discuss the possibility of deploying it.
+
+The relevant crates here are:
+
+- [git-server](./git-server/): A simple git server library
+- [ssh-server](./ssh-server/): A simple ssh server library, reused by the git-server library
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details.

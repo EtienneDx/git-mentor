@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use log::info;
 use russh::{
   server::{Config, Server},
   ChannelId,
@@ -68,7 +69,7 @@ where
   U: User,
 {
   /// Starts listening for connections on the given port.
-  pub async fn listen(self, port: u16) -> Result<(), SshError> {
+  pub async fn listen(mut self, port: u16) -> Result<(), SshError> {
     let config = Config {
       inactivity_timeout: Some(std::time::Duration::from_secs(30)),
       auth_rejection_time: std::time::Duration::from_secs(3),
@@ -76,8 +77,9 @@ where
       ..Default::default()
     };
     let config = Arc::new(config);
-    let res = russh::server::run(config, ("0.0.0.0", port), self);
-    println!("Listening on port {}", port);
+    let res = self.run_on_address(config, ("0.0.0.0", port));
+    // let res = russh::server::run(config, ("0.0.0.0", port), self);
+    info!("Listening on port {}", port);
     res.await.map_err(|e| e.into())
   }
 }

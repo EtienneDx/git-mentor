@@ -1,0 +1,34 @@
+version: 0.0
+os: linux
+files:
+  - source: gmt-server
+    destination: /gmt/bin
+  - source: gmt-api
+    destination: /gmt/bin
+  - source: ci/gmt-server.service
+    destination: /etc/systemd/system
+  - source: ci/gmt-api.service
+    destination: /etc/systemd/system
+  - source: ci/.env
+    destination: /gmt
+hooks:
+  BeforeInstall:
+    - location: ci/before_install.sh
+      timeout: 300
+      runas: root
+  AfterInstall:
+    - location: ci/after_install.sh
+      timeout: 300
+      runas: root
+  ApplicationStop:
+    - location: ci/stop.sh
+      timeout: 300
+      runas: root
+  ApplicationStart:
+    - location: ci/start.sh
+      timeout: 300
+      runas: root
+  ValidateService:
+    - location: ci/validate.sh
+      timeout: 300
+      runas: root

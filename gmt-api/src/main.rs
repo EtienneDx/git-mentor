@@ -11,7 +11,7 @@ pub mod swagger;
 #[tokio::main]
 async fn main() -> Result<(), std::io::Error> {
   simple_logger::SimpleLogger::new().env().init().unwrap();
-  dotenv::dotenv().ok();
+  dotenvy::dotenv().ok();
 
   let connection_pool = ConnectionPool::new_from_env().expect("Failed to create connection pool");
   connection_pool
@@ -23,11 +23,16 @@ async fn main() -> Result<(), std::io::Error> {
 
   (api_service, app) = add_swagger_ui(api_service, app);
 
-  app = app.nest("/", api_service);
+  let api_root = std::env::var("API_ROOT").unwrap_or_else(|_| "/".to_string());
 
-  log::info!("Listening on port 3001");
+  app = app.nest(&api_root, api_service);
 
-  poem::Server::new(TcpListener::bind("0.0.0.0:3001"))
-    .run(app.with(Cors::new().allow_origin("http://localhost:3000")))
+  let port = std::env::var("API_PORT").unwrap_or_else(|_| "3001".to_string());
+  let cors = std::env::var("API_CORS").unwrap_or_else(|_| "http://localhost:3000".to_string());
+
+  log::info!("Listening on port {}", port);
+
+  poem::Server::new(TcpListener::bind(format!("0.0.0.0:{}", port)))
+    .run(app.with(Cors::new().allow_origin(cors)))
     .await
 }

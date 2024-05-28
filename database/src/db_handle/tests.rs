@@ -33,7 +33,7 @@ impl DerefMut for HandleWrapper {
 #[rstest::fixture]
 #[once]
 fn connection_string() -> String {
-  dotenv::dotenv().ok();
+  dotenvy::dotenv().ok();
   let database_url = std::env::var("DATABASE_URL").unwrap();
 
   // Run migrations once

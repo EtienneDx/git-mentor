@@ -1,4 +1,4 @@
-use std::ops::DerefMut;
+use std::{error::Error, ops::DerefMut};
 
 use diesel::{
   migration::MigrationVersion,
@@ -40,7 +40,7 @@ where
     self
       .conn
       .run_pending_migrations(MIGRATIONS)
-      .map_err(|_| DatabaseError::MigrationError)
+      .map_err(|e: Box<dyn Error + Send + Sync>| DatabaseError::MigrationError(e))
   }
 
   #[cfg(test)]

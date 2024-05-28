@@ -1,0 +1,11 @@
+[Unit]
+Description=GMT API Server
+After=network.target
+
+[Service]
+ExecStart=/gmt/bin/gmt-api
+WorkingDirectory=/gmt
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
